@@ -1,0 +1,8 @@
+tests/catch.hpp
+tests/test_block_diag_ilu
+python_prototype/_block_diag_ilu.so
+python_prototype/_block_diag_ilu.cpp
+python_prototype/*.pyc
+python_prototype/build
+python_prototype/.cache
+python_prototype/*/__pycache__
