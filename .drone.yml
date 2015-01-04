@@ -5,6 +5,7 @@ script:
   - cd tests
   - make
   - cd ../python_prototype
-  - py.test
+  - PYTHONPATH=. py.test
+  - export PATH=$MINICONDA_PATH/bin:$PATH  # Cython present in miniconda installation
   - CPLUS_INCLUDE_PATH=../include python setup.py build_ext -i
-  - USE_FAST_FAKELU=1 py.test
+  - PYTHONPATH=. USE_FAST_FAKELU=1 py.test

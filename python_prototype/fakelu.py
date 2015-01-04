@@ -5,7 +5,13 @@ import numpy as np
 import scipy.linalg
 
 # Here comes the fast implementation:
-from _block_diag_ilu import PyILU
+try:
+    from _block_diag_ilu import PyILU
+except ImportError:
+    # You better not use fast_FakeLU()...
+    class PyILU:
+        pass
+
 class ILU:
 
     def __init__(self, A, sub, sup, blockw, ndiag=0):
@@ -81,41 +87,21 @@ class ILU:
         ndiag = self._pyilu.ndiag
         dim = nblocks*blockw
         LU = np.zeros((dim, dim))
-        print("getting LU..")
-        for dummy in range(3):
-            print("predummy:", dummy)  # this should be idempotent (but it's not!! GC?)
-            for di in range(ndiag):
-                idx = 0
-                for bi in range(nblocks-di-1):
-                    for ci in range(blockw):
-                        lri_u = self._pyilu.rowbycol_get(idx)
-                        lri_l = self._pyilu.rowbycol_get(idx+blockw*di)
-                        LU[bi*blockw + lri_l + blockw*(di+1), idx] = self._pyilu.sub_get(
-                            di, bi, ci)
-                        LU[bi*blockw + lri_u, idx + blockw*(di+1)] = self._pyilu.sup_get(
-                            di, bi, ci)
-                        idx += 1
-
         LUblocks = self._pyilu.get_LU()
-        print("..got LU, setting block diags...")
         for bi in range(nblocks):
             slc = slice(bi*blockw, (bi+1)*blockw)
             LU[slc, slc] = LUblocks[:, slc]
-        print("...block diags set, setting sub/sup..")
-        for dummy in range(3):
-            print("dummy:", dummy) # this should be idempotent
-            for di in range(ndiag):
-                idx = 0
-                for bi in range(nblocks-di-1):
-                    for ci in range(blockw):
-                        lri_u = self._pyilu.rowbycol_get(idx)
-                        lri_l = self._pyilu.rowbycol_get(idx+blockw*di)
-                        LU[bi*blockw + lri_l + blockw*(di+1), idx] = self._pyilu.sub_get(
-                            di, bi, ci)
-                        LU[bi*blockw + lri_u, idx + blockw*(di+1)] = self._pyilu.sup_get(
-                            di, bi, ci)
-                        idx += 1
-        print("...sub/sup set. Returning merged LU")
+        for di in range(ndiag):
+            idx = 0
+            for bi in range(nblocks-di-1):
+                for ci in range(blockw):
+                    lri_u = self._pyilu.rowbycol_get(idx)
+                    lri_l = self._pyilu.rowbycol_get(idx+blockw*di)
+                    LU[bi*blockw + lri_l + blockw*(di+1), idx] = self._pyilu.sub_get(
+                        di, bi, ci)
+                    LU[bi*blockw + lri_u, idx + blockw*(di+1)] = self._pyilu.sup_get(
+                        di, bi, ci)
+                    idx += 1
         return LU
 
     @property
