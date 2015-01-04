@@ -5,7 +5,13 @@ import numpy as np
 import scipy.linalg
 
 # Here comes the fast implementation:
-from _block_diag_ilu import PyILU
+try:
+    from _block_diag_ilu import PyILU
+except ImportError:
+    # You better not use fast_FakeLU()...
+    class PyILU:
+        pass
+
 class ILU:
 
     def __init__(self, A, sub, sup, blockw, ndiag=0):
