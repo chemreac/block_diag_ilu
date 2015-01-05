@@ -61,6 +61,10 @@ namespace block_diag_ilu {
         }
     }
 
+    constexpr int diag_store_len(int N, int n, int ndiag) {
+        return n*(N*ndiag - (ndiag*ndiag + ndiag)/2);
+    };
+
     class ILU {
         double * const __restrict__ block_data;
         double * const __restrict__ sub_data;
@@ -79,11 +83,11 @@ namespace block_diag_ilu {
     public:
         inline double sub_get(const int diagi, const int blocki,
                               const int coli) const {
-            const int skip_ahead = (this->blockw)*(diagi*(this->nblocks) - (diagi*diagi + diagi)/2);
+            const int skip_ahead = diag_store_len(this->nblocks, this->blockw, diagi);
             return this->sub_data[skip_ahead + blocki*(this->blockw) + coli];
         }
         inline double sup_get(const int diagi, const int blocki, const int coli) const {
-            const int skip_ahead = (this->blockw)*(diagi*(this->nblocks) - (diagi*diagi + diagi)/2);
+            const int skip_ahead = diag_store_len(this->nblocks, this->blockw, diagi);
             return this->sup_data[skip_ahead + blocki*(this->blockw) + coli];
         }
         int piv_get(const int idx) { return this->piv[idx]; }
@@ -114,7 +118,7 @@ namespace block_diag_ilu {
                         &info);
                 for (int ci = 0; ci < blockw; ++ci){
                     for (int di = 0; (di < (this->ndiag)) && (bi+di < (this->nblocks) - 1); ++di){
-                        const int skip_ahead = blockw*(di*(this->nblocks) - (di*di + di)/2);
+                        const int skip_ahead = diag_store_len(this->nblocks, this->blockw, di);
                         const int gi = skip_ahead + bi*(this->blockw) + ci;
                         this->sub_data[gi] = sub_data[gi]/(this->lu_get(bi, ci, ci));
                     }
@@ -160,5 +164,64 @@ namespace block_diag_ilu {
             }
         }
     };
+
+    class BlockDiagMat {
+    public:
+        const int nblocks, blockw, ndiag, sub_offset, sup_offset;
+        std::unique_ptr<double[]> data;
+        BlockDiagMat(int nblocks, int blockw, int ndiag) :
+            nblocks(nblocks), blockw(blockw), ndiag(ndiag),
+            data(make_unique<double[]>(nblocks*blockw*blockw+2*diag_store_len(nblocks, blockw, ndiag))),
+            sub_offset(nblocks*blockw*blockw), sup_offset(nblocks*blockw*blockw + diag_store_len(nblocks, blockw, ndiag)) {}
+        inline double& block(int bi, int ri, int ci) {
+            return data[bi*(this->blockw)*(this->blockw) + ci*(this->blockw) + ri];
+        }
+        inline double& sub(int di, int bi, int lci) {
+            return data[this->sub_offset + bi*(this->blockw) + lci];
+        }
+        inline double& sup(int di, int bi, int lci) {
+            return data[this->sup_offset + bi*(this->blockw) + lci];
+        }
+        void set_to_1_minus_gamma_times_other(double gamma, BlockDiagMat &other) {
+            for (int bi=0; bi<this->nblocks; ++bi)
+                for (int ci=0; ci<this->blockw; ++ci)
+                    for (int ri=0; ri<this->blockw; ++ri)
+                        this->block(bi, ri, ci) = -gamma*other.block(bi, ri, ci);
+
+            for (int bi=0; bi<this->nblocks; ++bi)
+                for (int ci=0; ci<this->blockw; ++ci)
+                    this->block(bi, ci, ci) += 1;
+
+            for (int di=0; di<this->ndiag; ++di)
+                for (int bi=0; bi<this->nblocks-di-1; ++bi)
+                    for (int ci=0; ci<this->blockw; ++ci){
+                        this->sub(di, bi, ci) = -gamma*other.sub(di, bi, ci);
+                        this->sup(di, bi, ci) = -gamma*other.sup(di, bi, ci);
+                    }
+        }
+        ILU ilu_inplace() {
+            return ILU(&this->data[0],
+                       &this->data[this->sub_offset],
+                       &this->data[this->sup_offset],
+                       this->nblocks, this->blockw, this->ndiag);
+        }
+        void dot_vec(const double * const vec, double * const out){
+            const int nblocks = this->nblocks;
+            const int blockw = this->blockw;
+            for (int i=0; i<nblocks*blockw; ++i)
+                out[i] = 0.0;
+            for (int bi=0; bi<nblocks; ++bi)
+                for (int ci=0; ci<blockw; ++ci)
+                    for (int ri=0; ri<blockw; ++ri)
+                        out[bi*blockw + ri] += vec[bi*blockw + ci]*(this->block(bi, ri, ci));
+            for (int di=0; di<this->ndiag; ++di)
+                for (int bi=0; bi<nblocks-di-1; ++bi)
+                    for (int ci=0; ci<blockw; ++ci){
+                        out[bi*blockw + ci] += this->sup(di, bi, ci)*vec[(bi+di+1)*blockw+ci];
+                        out[(bi+di+1)*blockw + ci] += this->sub(di, bi, ci)*vec[bi*blockw+ci];
+                    }
+        }
+    };
+
 };
 #endif
