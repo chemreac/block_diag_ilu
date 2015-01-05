@@ -36,7 +36,7 @@ namespace block_diag_ilu {
 
     extern "C" void dgetrf_(const int* dim1, const int* dim2, double* a, int* lda, int* ipiv, int* info);
 
-    void rowpiv2rowbycol(int n, const int * const piv, int * const rowbycol) {
+    inline void rowpiv2rowbycol(int n, const int * const piv, int * const rowbycol) {
         for (int i = 0; i < n; ++i){
             rowbycol[i] = i;
         }
@@ -50,7 +50,7 @@ namespace block_diag_ilu {
         }
     }
 
-    void rowbycol2colbyrow(int n, const int * const rowbycol, int * const colbyrow){
+    inline void rowbycol2colbyrow(int n, const int * const rowbycol, int * const colbyrow){
         for (int i=0; i<n; ++i){
             for (int j=0; j<n; ++j){
                 if (rowbycol[j] == i){
@@ -199,6 +199,8 @@ namespace block_diag_ilu {
                         this->sup(di, bi, ci) = -gamma*other.sup(di, bi, ci);
                     }
         }
+
+        // The end user must assure that the underlying data stays in scope.
         ILU ilu_inplace() {
             return ILU(&this->data[0],
                        &this->data[this->sub_offset],
