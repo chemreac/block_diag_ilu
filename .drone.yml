@@ -1,11 +1,13 @@
 image: bjodah/chemreac  # git, g++, lapack, cython, py.test etc.
 git:
-    path: github.com/bjodah/block_diag_ilu
+    path: github.com/chemreac/block_diag_ilu
 script:
   - cd tests
   - make
   - cd ../python_prototype
-  - PYTHONPATH=. py.test
   - export PATH=$MINICONDA_PATH/bin:$PATH  # Cython present in miniconda installation
-  - CPLUS_INCLUDE_PATH=../include python setup.py build_ext -i
+  - PYTHONPATH=. py.test
+  - export NP_INC=$(python -c "import numpy; print(numpy.get_include())")
+  - echo $NP_INC
+  - CPLUS_INCLUDE_PATH=../include:$NP_INC python setup.py build_ext -i
   - PYTHONPATH=. USE_FAST_FAKELU=1 py.test

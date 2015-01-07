@@ -63,7 +63,7 @@ namespace block_diag_ilu {
 
     constexpr int diag_store_len(int N, int n, int ndiag) {
         return n*(N*ndiag - (ndiag*ndiag + ndiag)/2);
-    };
+    }
 
     class ILU {
         double * const __restrict__ block_data;
@@ -171,16 +171,18 @@ namespace block_diag_ilu {
         std::unique_ptr<double[]> data;
         BlockDiagMat(int nblocks, int blockw, int ndiag) :
             nblocks(nblocks), blockw(blockw), ndiag(ndiag),
-            data(make_unique<double[]>(nblocks*blockw*blockw+2*diag_store_len(nblocks, blockw, ndiag))),
-            sub_offset(nblocks*blockw*blockw), sup_offset(nblocks*blockw*blockw + diag_store_len(nblocks, blockw, ndiag)) {}
+            sub_offset(nblocks*blockw*blockw),
+            sup_offset(nblocks*blockw*blockw + diag_store_len(nblocks, blockw, ndiag)),
+            data(make_unique<double[]>(nblocks*blockw*blockw+2*diag_store_len(nblocks, blockw, ndiag)))
+            {}
         inline double& block(int bi, int ri, int ci) {
             return data[bi*(this->blockw)*(this->blockw) + ci*(this->blockw) + ri];
         }
         inline double& sub(int di, int bi, int lci) {
-            return data[this->sub_offset + bi*(this->blockw) + lci];
+            return data[this->sub_offset + diag_store_len(this->nblocks, this->blockw, di) + bi*(this->blockw) + lci];
         }
         inline double& sup(int di, int bi, int lci) {
-            return data[this->sup_offset + bi*(this->blockw) + lci];
+            return data[this->sup_offset + diag_store_len(this->nblocks, this->blockw, di) + bi*(this->blockw) + lci];
         }
         void set_to_1_minus_gamma_times_other(double gamma, BlockDiagMat &other) {
             for (int bi=0; bi<this->nblocks; ++bi)
@@ -225,5 +227,5 @@ namespace block_diag_ilu {
         }
     };
 
-};
+}
 #endif

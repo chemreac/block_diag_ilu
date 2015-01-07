@@ -2,8 +2,8 @@
 block_diag_ilu
 ==============
 
-.. image:: http://hera.physchem.kth.se:8080/github.com/bjodah/block_diag_ilu/status.svg?branch=master
-   :target: http://hera.physchem.kth.se:8080/github.com/bjodah/block_diag_ilu
+.. image:: http://hera.physchem.kth.se:8080/github.com/chemreac/block_diag_ilu/status.svg?branch=master
+   :target: http://hera.physchem.kth.se:8080/github.com/chemreac/block_diag_ilu
    :alt: Build status
 
 ``block_diag_ilu`` is an open source C++ header implementeation of an
@@ -16,7 +16,7 @@ License
 =======
 The source code is Open Source and is released under the very permissive
 "simplified (2-clause) BSD license". See ``LICENSE.txt`` for further details.
-Contributors are welcome to suggest improvements at https://github.com/bjodah/block_diag_ilu
+Contributors are welcome to suggest improvements at https://github.com/chemreac/block_diag_ilu
 
 Author
 ======
