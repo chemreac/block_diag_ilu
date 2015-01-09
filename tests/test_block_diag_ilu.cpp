@@ -110,7 +110,7 @@ TEST_CASE( "addressing", "[BlockDiagMat]" ) {
             13, 14, 15, 16,
             17, 18, 19, 20
     };
-    for (int i=0; i<d.size(); ++i)
+    for (size_t i=0; i<d.size(); ++i)
         m.data[i] = d[i];
 
     SECTION( "block" ) {
@@ -143,6 +143,56 @@ TEST_CASE( "addressing", "[BlockDiagMat]" ) {
     }
 }
 
+TEST_CASE( "addressing multi diag", "[BlockDiagMat]" ) {
+    block_diag_ilu::BlockDiagMat m {3, 2, 2};
+    std::array<double, 2*2*3+2*2*(2+1)> d {
+        1, 2, 3, 4,
+            5, 6, 7, 8,
+            9, 10, 11, 12,
+            13, 14, 15, 16,
+            91, 92,
+            17, 18, 19, 20,
+            81, 82
+    };
+    for (size_t i=0; i<d.size(); ++i)
+        m.data[i] = d[i];
+
+    SECTION( "block" ) {
+        REQUIRE( m.block(0, 0, 0) == d[0] );
+        REQUIRE( m.block(0, 1, 0) == d[1] );
+        REQUIRE( m.block(0, 0, 1) == d[2] );
+        REQUIRE( m.block(0, 1, 1) == d[3] );
+
+        REQUIRE( m.block(1, 0, 0) == d[4] );
+        REQUIRE( m.block(1, 1, 0) == d[5] );
+        REQUIRE( m.block(1, 0, 1) == d[6] );
+        REQUIRE( m.block(1, 1, 1) == d[7] );
+
+        REQUIRE( m.block(2, 0, 0) == d[8] );
+        REQUIRE( m.block(2, 1, 0) == d[9] );
+        REQUIRE( m.block(2, 0, 1) == d[10] );
+        REQUIRE( m.block(2, 1, 1) == d[11] );
+    }
+    SECTION( "sub" ) {
+        REQUIRE( m.sub(0, 0, 0) == d[12] );
+        REQUIRE( m.sub(0, 0, 1) == d[13] );
+        REQUIRE( m.sub(0, 1, 0) == d[14] );
+        REQUIRE( m.sub(0, 1, 1) == d[15] );
+
+        REQUIRE( m.sub(1, 0, 0) == d[16] );
+        REQUIRE( m.sub(1, 0, 1) == d[17] );
+    }
+    SECTION( "sup" ) {
+        REQUIRE( m.sup(0, 0, 0) == d[18] );
+        REQUIRE( m.sup(0, 0, 1) == d[19] );
+        REQUIRE( m.sup(0, 1, 0) == d[20] );
+        REQUIRE( m.sup(0, 1, 1) == d[21] );
+
+        REQUIRE( m.sup(1, 0, 0) == d[22] );
+        REQUIRE( m.sup(1, 0, 1) == d[23] );
+    }
+}
+
 TEST_CASE( "set_to_1_minus_gamma_times_other", "[BlockDiagMat]" ) {
     block_diag_ilu::BlockDiagMat m {3, 2, 1};
     std::array<double, 2*2*3+2*2+2*2> d {
@@ -152,7 +202,7 @@ TEST_CASE( "set_to_1_minus_gamma_times_other", "[BlockDiagMat]" ) {
             13, 14, 15, 16,
             17, 18, 19, 20
     };
-    for (int i=0; i<d.size(); ++i)
+    for (size_t i=0; i<d.size(); ++i)
         m.data[i] = d[i];
 
     block_diag_ilu::BlockDiagMat n {3, 2, 1};
@@ -201,7 +251,7 @@ TEST_CASE( "ilu_inplace", "[BlockDiagMat]" ) {
             1, 2, 3, 4,
             2, 3, 4, 5
     };
-    for (int i=0; i<d.size(); ++i)
+    for (size_t i=0; i<d.size(); ++i)
         bdm.data[i] = d[i];
 
     block_diag_ilu::ILU ilu = bdm.ilu_inplace();
@@ -250,7 +300,7 @@ TEST_CASE( "dot_vec", "[BlockDiagMat]" ) {
             1, 2, 3, 4,
             2, 3, 4, 5
     };
-    for (int i=0; i<d.size(); ++i)
+    for (size_t i=0; i<d.size(); ++i)
         bdm.data[i] = d[i];
     const std::array<double, nblocks*blockw> x {3, 2, 6, 2, 5, 4};
     const std::array<double, nblocks*blockw> bref {
