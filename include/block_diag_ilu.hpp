@@ -5,6 +5,15 @@
 #include <memory>
 // C++11 source code
 
+#if !defined(DEBUG_PRINT)
+#if defined(DEBUG_VERBOSE)
+#include <stdio.h>
+#define DEBUG_PRINT(args...) printf(args); fflush(stdout)
+#else
+#define DEBUG_PRINT(args...)
+#endif
+#endif
+
 
 namespace block_diag_ilu {
 
@@ -131,18 +140,27 @@ namespace block_diag_ilu {
             // before calling solve: make sure that the 
             // block_data and sup_data pointers are still valid.
             std::unique_ptr<double[]> y (new double[(this->nblocks)*(this->blockw)]);
+            DEBUG_PRINT("solve():\n");
             for (int bri = 0; bri < (this->nblocks); ++bri){
+                DEBUG_PRINT("  bri=%d\n", bri);
                 for (int li = 0; li < (this->blockw); ++li){
+                    DEBUG_PRINT("    li=%d\n", li);
                     double s = 0.0;
                     for (int lci = 0; lci < li; ++lci){
+                        DEBUG_PRINT("      lci=%d\n", lci);
                         s += this->lu_get(bri, li, lci)*y[bri*(this->blockw) + lci];
                     }
                     for (int di = 1; di < (this->ndiag) + 1; ++di){
                         if (bri >= di) {
                             int ci = this->colbyrow[bri*(this->blockw) + li];
+                            DEBUG_PRINT("      di=%d, ci=%d\n", di, ci);
+                            DEBUG_PRINT("      ...sub_get(di-1, bri-di, ci) = sub_get(%d, %d, %d)\n", di-1, bri-di, ci);
+                            DEBUG_PRINT("      ...y[(bri-di)*(this->blockw) + ci] = y[(%d)*(%d) + %d]\n", bri-di, this->blockw, ci);
                             s += (this->sub_get(di-1, bri-di, ci) * y[(bri-di)*(this->blockw) + ci]);
                         }
                     }
+                    DEBUG_PRINT("    y[bri*(this->blockw) + li] = y[%d*(%d) + %d] = ...\n", bri, this->blockw, li);
+                    DEBUG_PRINT("    ... = b[bri*(this->blockw) + this->rowbycol[bri*(this->blockw) + li] ] = b[%d*(%d) + this->rowbycol[%d*(%d) + %d]\n", bri, this->blockw, bri, this->blockw, li);
                     y[bri*(this->blockw) + li] = b[bri*(this->blockw) 
                                                    + this->rowbycol[bri*(this->blockw) + li]
                                                    ] - s;

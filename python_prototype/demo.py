@@ -41,12 +41,16 @@ def main(N=5, n=5, ndiag=1, factor=1e-2, seed=42):
         x_blk.append(lu_solve(lu_factor(cur_block), b[slc]))
 
     for di in range(ndiag):
-        sub.append(rnd((N-di-1)*n))
-        sup.append(rnd((N-di-1)*n))
+        sub.append(factor*rnd((N-di-1)*n))
+        sup.append(factor*rnd((N-di-1)*n))
 
+    print("about to call fast_FakeLU")
     fLU = fast_FakeLU(A, n, ndiag)
+    print("back from fast_FakeLU")
     x_ref = lu_solve(lu_factor(A), b)
+    print("about to call FakeLU.solve()")
     x_ilu = fLU.solve(b)
+    print("back from call to FakeLU.solve()")
     plt.plot(x_ref, 'Ref')
     plt.plot(x_ilu, 'ILU')
     plt.plot(x_blk, 'block')
