@@ -5,15 +5,6 @@
 #include <memory>
 // C++11 source code
 
-#if !defined(DEBUG_PRINT)
-#if defined(DEBUG_VERBOSE)
-#include <stdio.h>
-#define DEBUG_PRINT(args...) printf(args); fflush(stdout)
-#else
-#define DEBUG_PRINT(args...)
-#endif
-#endif
-
 
 namespace block_diag_ilu {
 
@@ -119,7 +110,6 @@ namespace block_diag_ilu {
               colbyrow(make_unique<int[]>(blockw*nblocks)) {
             int info = 0; // currently ignored
             for (int bi=0; bi<nblocks; ++bi){
-                DEBUG_PRINT("bi = %d\n", bi);
                 dgetrf_(&(this->blockw),
                         &(this->blockw),
                         &block_data[bi*blockw*(this->ld_block_data)],
@@ -133,45 +123,26 @@ namespace block_diag_ilu {
                         this->sub_data[gi] = sub_data[gi]/(this->lu_get(bi, ci, ci));
                     }
                 }
-                DEBUG_PRINT("  piv = ");
-                for (int debug_idx=0; debug_idx<blockw; ++debug_idx) DEBUG_PRINT("%d ", piv[bi*blockw+debug_idx]);
-                DEBUG_PRINT("\n");
                 rowpiv2rowbycol(blockw, &piv[bi*blockw], &rowbycol[bi*blockw]);
-                DEBUG_PRINT("  rowbycol = ");
-                for (int debug_idx=0; debug_idx<blockw; ++debug_idx) DEBUG_PRINT("%d ", rowbycol[bi*blockw+debug_idx]);
                 rowbycol2colbyrow(blockw, &rowbycol[bi*blockw], &colbyrow[bi*blockw]);
-                DEBUG_PRINT("\n  colbyrow = ");
-                for (int debug_idx=0; debug_idx<blockw; ++debug_idx) DEBUG_PRINT("%d ", colbyrow[bi*blockw+debug_idx]);
-                DEBUG_PRINT("\n");
             }
-            DEBUG_PRINT("\n");
         }
         void solve(const double * const __restrict__ b, double * const __restrict__ x) const {
             // before calling solve: make sure that the 
             // block_data and sup_data pointers are still valid.
             std::unique_ptr<double[]> y (new double[(this->nblocks)*(this->blockw)]);
-            DEBUG_PRINT("solve():\n");
             for (int bri = 0; bri < (this->nblocks); ++bri){
-                DEBUG_PRINT("  bri=%d\n", bri);
                 for (int li = 0; li < (this->blockw); ++li){
-                    DEBUG_PRINT("    li=%d\n", li);
                     double s = 0.0;
                     for (int lci = 0; lci < li; ++lci){
-                        DEBUG_PRINT("      lci=%d\n", lci);
                         s += this->lu_get(bri, li, lci)*y[bri*(this->blockw) + lci];
                     }
                     for (int di = 1; di < (this->ndiag) + 1; ++di){
                         if (bri >= di) {
-                            DEBUG_PRINT("      ci = this->colbyrow[bri*(this->blockw) + li] = this->colbyrow[%d*(%d) + %d]\n", bri, this->blockw, li);
                             int ci = this->colbyrow[bri*(this->blockw) + li];
-                            DEBUG_PRINT("      di=%d, ci=%d\n", di, ci);
-                            DEBUG_PRINT("      ...sub_get(di-1, bri-di, ci) = sub_get(%d, %d, %d)\n", di-1, bri-di, ci);
-                            DEBUG_PRINT("      ...y[(bri-di)*(this->blockw) + ci] = y[(%d)*(%d) + %d]\n", bri-di, this->blockw, ci);
                             s += (this->sub_get(di-1, bri-di, ci) * y[(bri-di)*(this->blockw) + ci]);
                         }
                     }
-                    DEBUG_PRINT("    y[bri*(this->blockw) + li] = y[%d*(%d) + %d] = ...\n", bri, this->blockw, li);
-                    DEBUG_PRINT("    ... = b[bri*(this->blockw) + this->rowbycol[bri*(this->blockw) + li] ] = b[%d*(%d) + this->rowbycol[%d*(%d) + %d]\n", bri, this->blockw, bri, this->blockw, li);
                     y[bri*(this->blockw) + li] = b[bri*(this->blockw) 
                                                    + this->rowbycol[bri*(this->blockw) + li]
                                                    ] - s;
