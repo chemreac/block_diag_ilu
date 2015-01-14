@@ -53,7 +53,7 @@ namespace block_diag_ilu {
             int j = piv[i] - 1; // Fortran indexing starts with 1
             if (i != j){
                 int tmp = rowbycol[j];
-                rowbycol[j] = i;
+                rowbycol[j] = rowbycol[i];
                 rowbycol[i] = tmp;
             }
         }
@@ -119,6 +119,7 @@ namespace block_diag_ilu {
               colbyrow(make_unique<int[]>(blockw*nblocks)) {
             int info = 0; // currently ignored
             for (int bi=0; bi<nblocks; ++bi){
+                DEBUG_PRINT("bi = %d\n", bi);
                 dgetrf_(&(this->blockw),
                         &(this->blockw),
                         &block_data[bi*blockw*(this->ld_block_data)],
@@ -132,9 +133,18 @@ namespace block_diag_ilu {
                         this->sub_data[gi] = sub_data[gi]/(this->lu_get(bi, ci, ci));
                     }
                 }
+                DEBUG_PRINT("  piv = ");
+                for (int debug_idx=0; debug_idx<blockw; ++debug_idx) DEBUG_PRINT("%d ", piv[bi*blockw+debug_idx]);
+                DEBUG_PRINT("\n");
                 rowpiv2rowbycol(blockw, &piv[bi*blockw], &rowbycol[bi*blockw]);
+                DEBUG_PRINT("  rowbycol = ");
+                for (int debug_idx=0; debug_idx<blockw; ++debug_idx) DEBUG_PRINT("%d ", rowbycol[bi*blockw+debug_idx]);
                 rowbycol2colbyrow(blockw, &rowbycol[bi*blockw], &colbyrow[bi*blockw]);
+                DEBUG_PRINT("\n  colbyrow = ");
+                for (int debug_idx=0; debug_idx<blockw; ++debug_idx) DEBUG_PRINT("%d ", colbyrow[bi*blockw+debug_idx]);
+                DEBUG_PRINT("\n");
             }
+            DEBUG_PRINT("\n");
         }
         void solve(const double * const __restrict__ b, double * const __restrict__ x) const {
             // before calling solve: make sure that the 
@@ -152,6 +162,7 @@ namespace block_diag_ilu {
                     }
                     for (int di = 1; di < (this->ndiag) + 1; ++di){
                         if (bri >= di) {
+                            DEBUG_PRINT("      ci = this->colbyrow[bri*(this->blockw) + li] = this->colbyrow[%d*(%d) + %d]\n", bri, this->blockw, li);
                             int ci = this->colbyrow[bri*(this->blockw) + li];
                             DEBUG_PRINT("      di=%d, ci=%d\n", di, ci);
                             DEBUG_PRINT("      ...sub_get(di-1, bri-di, ci) = sub_get(%d, %d, %d)\n", di-1, bri-di, ci);

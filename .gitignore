@@ -6,4 +6,6 @@ python_prototype/*.pyc
 python_prototype/build
 python_prototype/.cache
 python_prototype/*/__pycache__
+python_prototype/*.png
+python_prototype/*.out
 .cache/
