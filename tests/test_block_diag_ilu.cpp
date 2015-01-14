@@ -4,6 +4,28 @@
 #include "block_diag_ilu.hpp"
 #include <array>
 
+TEST_CASE( "rowpiv2rowbycol" "[ILU]" ) {
+    const std::array<int, 5> piv {3, 4, 5, 4, 5};
+    std::array<int, 5> rowbycol;
+    block_diag_ilu::rowpiv2rowbycol(5, &piv[0], &rowbycol[0]);
+    REQUIRE( rowbycol[0] == 2 );
+    REQUIRE( rowbycol[1] == 3 );
+    REQUIRE( rowbycol[2] == 4 );
+    REQUIRE( rowbycol[3] == 1 );
+    REQUIRE( rowbycol[4] == 0 );
+}
+
+TEST_CASE( "rowbycol2colbyrow" "[ILU]" ) {
+    const std::array<int, 5> rowbycol {2, 3, 4, 1, 0};
+    std::array<int, 5> colbyrow;
+    block_diag_ilu::rowbycol2colbyrow(5, &rowbycol[0], &colbyrow[0]);
+    REQUIRE( colbyrow[0] == 4 );
+    REQUIRE( colbyrow[1] == 3 );
+    REQUIRE( colbyrow[2] == 0 );
+    REQUIRE( colbyrow[3] == 1 );
+    REQUIRE( colbyrow[4] == 2 );
+}
+
 TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU]" ) {
 
     // this is _get_test_m2 in test_fakelu.py

@@ -44,7 +44,7 @@ namespace block_diag_ilu {
             int j = piv[i] - 1; // Fortran indexing starts with 1
             if (i != j){
                 int tmp = rowbycol[j];
-                rowbycol[j] = i;
+                rowbycol[j] = rowbycol[i];
                 rowbycol[i] = tmp;
             }
         }
