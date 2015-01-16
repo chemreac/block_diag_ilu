@@ -90,9 +90,11 @@ namespace block_diag_ilu {
             const int skip_ahead = diag_store_len(this->nblocks, this->blockw, diagi);
             return this->sup_data[skip_ahead + blocki*(this->blockw) + coli];
         }
+#ifdef UNIT_TEST
         int piv_get(const int idx) { return this->piv[idx]; }
         int rowbycol_get(const int idx) { return this->rowbycol[idx]; }
         int colbyrow_get(const int idx) { return this->colbyrow[idx]; }
+#endif
         ILU(double * const __restrict__ block_data,
             double * const __restrict__ sub_data,
             const double * const __restrict__ sup_data,
@@ -185,15 +187,18 @@ namespace block_diag_ilu {
             return data[this->sup_offset + diag_store_len(this->nblocks, this->blockw, di) + bi*(this->blockw) + lci];
         }
         void set_to_1_minus_gamma_times_other(double gamma, BlockDiagMat &other) {
+            // Scale main blocks by -gamma
             for (int bi=0; bi<this->nblocks; ++bi)
                 for (int ci=0; ci<this->blockw; ++ci)
                     for (int ri=0; ri<this->blockw; ++ri)
                         this->block(bi, ri, ci) = -gamma*other.block(bi, ri, ci);
 
+            // Add the identiy matrix
             for (int bi=0; bi<this->nblocks; ++bi)
                 for (int ci=0; ci<this->blockw; ++ci)
                     this->block(bi, ci, ci) += 1;
 
+            // Scale diagonals by -gamma
             for (int di=0; di<this->ndiag; ++di)
                 for (int bi=0; bi<this->nblocks-di-1; ++bi)
                     for (int ci=0; ci<this->blockw; ++ci){
@@ -202,7 +207,7 @@ namespace block_diag_ilu {
                     }
         }
 
-        // The end user must assure that the underlying data stays in scope.
+        // The end user must assure that the underlying data is not freed.
         ILU ilu_inplace() {
             return ILU(&this->data[0],
                        &this->data[this->sub_offset],

@@ -1,6 +1,6 @@
 CXX ?= g++
 LIBS ?= -llapack
-CXXFLAGS ?= -std=c++11 -Wall -pedantic
+CXXFLAGS ?= -std=c++11 -Wall -pedantic -DUNIT_TEST
 INCLUDE ?= -I../include
 #-D__restrict__=""
 
