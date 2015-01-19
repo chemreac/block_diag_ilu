@@ -4,11 +4,25 @@ git:
 script:
   - cd tests
   - make
+  - make clean
+  - make DEFINES=-DWITH_BLOCK_DIAG_ILU_DGETRF LIBS=""
   - cd ../python_prototype
   - export PATH=$MINICONDA_PATH/bin:$PATH  # Cython present in miniconda installation
   - PYTHONPATH=. py.test
   - export NP_INC=$(python -c "import numpy; print(numpy.get_include())")
   - echo $NP_INC
-  - CPLUS_INCLUDE_PATH=../include:$NP_INC python setup.py build_ext -i
+  - python setup.py build_ext -i
+  - PYTHONPATH=. USE_FAST_FAKELU=1 py.test
+  - PYTHONPATH=. python demo.py
+  - rm _block_diag_ilu.so
+  - WITH_BLOCK_DIAG_ILU_DGETRF=1 python setup.py build_ext -i
+  - PYTHONPATH=. USE_FAST_FAKELU=1 py.test
+  - PYTHONPATH=. python demo.py
+  - rm _block_diag_ilu.so
+  - WITH_BLOCK_DIAG_ILU_OPENMP=1 WITH_BLOCK_DIAG_ILU_DGETRF=0 python setup.py build_ext -i
+  - PYTHONPATH=. USE_FAST_FAKELU=1 py.test
+  - PYTHONPATH=. python demo.py
+  - rm _block_diag_ilu.so
+  - WITH_BLOCK_DIAG_ILU_OPENMP=1 WITH_BLOCK_DIAG_ILU_DGETRF=1 python setup.py build_ext -i
   - PYTHONPATH=. USE_FAST_FAKELU=1 py.test
   - PYTHONPATH=. python demo.py
