@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <utility>
 #include <memory>
+#include <cmath> // std::abs
 // C++11 source code
 
 
@@ -34,8 +35,12 @@ namespace block_diag_ilu {
     }
     // end copy paste from http://stackoverflow.com/a/10150181/790973
 
+#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+    int dgetrf_square(const int dim, double * const __restrict__ a,
+                      const int lda, int * const __restrict__ ipiv);
+#else
     extern "C" void dgetrf_(const int* dim1, const int* dim2, double* a, int* lda, int* ipiv, int* info);
-
+#endif
     inline void rowpiv2rowbycol(int n, const int * const piv, int * const rowbycol) {
         for (int i = 0; i < n; ++i){
             rowbycol[i] = i;
@@ -111,13 +116,24 @@ namespace block_diag_ilu {
               rowbycol(make_unique<int[]>(blockw*nblocks)),
               colbyrow(make_unique<int[]>(blockw*nblocks)) {
             int info = 0; // currently ignored
+#if defined(WITH_BLOCK_DIAG_ILU_OPENMP)
+#pragma omp parallel for
+#endif
             for (int bi=0; bi<nblocks; ++bi){
+#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+                info = dgetrf_square(
+                           this->blockw,
+                           &block_data[bi*blockw*(this->ld_block_data)],
+                           this->ld_block_data,
+                           &(this->piv[bi*blockw]));
+#else
                 dgetrf_(&(this->blockw),
                         &(this->blockw),
                         &block_data[bi*blockw*(this->ld_block_data)],
                         &(this->ld_block_data),
                         &(this->piv[bi*blockw]),
                         &info);
+#endif
                 for (int ci = 0; ci < blockw; ++ci){
                     for (int di = 0; (di < (this->ndiag)) && (bi+di < (this->nblocks) - 1); ++di){
                         const int skip_ahead = diag_store_len(this->nblocks, this->blockw, di);
@@ -233,4 +249,55 @@ namespace block_diag_ilu {
     };
 
 }
+
+#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+using std::abs;
+int block_diag_ilu::dgetrf_square(const int dim, double * const __restrict__ a,
+                                  const int lda, int * const __restrict__ ipiv){
+    // Unblocked algorithm for LU decomposition of square matrices
+    // using Doolittle's algorithm with rowswaps.
+    //
+    // ipiv indexing starts at 1 (Fortran compability)
+    if (dim == 0) return 0;
+
+    auto A = [&](int ri, int ci) -> double& { return a[ci*lda + ri]; };
+    auto swaprows = [&](int ri1, int ri2) { // this is not cache friendly
+        for (int ci=0; ci<dim; ++ci){
+            double temp = A(ri1, ci);
+            A(ri1, ci) = A(ri2, ci);
+            A(ri2, ci) = temp;
+        }
+    };
+
+    for (int i=0; i<dim-1; ++i) {
+        int pivrow = i;
+        double absmax = abs(A(i, i));
+        for (int j=i; j<dim; ++j) {
+            // Find pivot
+            double curabs = abs(A(j, i));
+            if (curabs > absmax){
+                absmax = curabs;
+                pivrow = j;
+            }
+        }
+        if (pivrow != i) {
+            // Swap rows
+            swaprows(i, pivrow);
+        }
+        ipiv[i] = pivrow+1;
+        // Eliminate in column
+        for (int ri=i+1; ri<dim; ++ri){
+            A(ri, i) = A(ri, i)/A(i, i);
+        }
+        // Subtract from rows
+        for (int ci=i+1; ci<dim; ++ci){
+            for (int ri=i+1; ri<dim; ++ri){
+                A(ri, ci) -= A(ri, i)*A(i, ci);
+            }
+        }
+    }
+    ipiv[dim-1] = dim;
+}
+#endif
+
 #endif

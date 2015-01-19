@@ -61,12 +61,12 @@ TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU]" ) {
                 -43.36875, -19.25625, 19.5875};
         std::array<double, 6> x;
         ilu.solve(b.data(), x.data());
-        REQUIRE( abs(x[0] - xref[0]) < 1e-15 );
-        REQUIRE( abs(x[1] - xref[1]) < 1e-15 );
-        REQUIRE( abs(x[2] - xref[2]) < 1e-15 );
-        REQUIRE( abs(x[3] - xref[3]) < 1e-15 );
-        REQUIRE( abs(x[4] - xref[4]) < 1e-15 );
-        REQUIRE( abs(x[5] - xref[5]) < 1e-15 );
+        REQUIRE( abs((x[0] - xref[0])/1e-14) < 1.0 );
+        REQUIRE( abs((x[1] - xref[1])/1e-14) < 1.0 );
+        REQUIRE( abs((x[2] - xref[2])/1e-14) < 1.0 );
+        REQUIRE( abs((x[3] - xref[3])/1e-14) < 1.0 );
+        REQUIRE( abs((x[4] - xref[4])/1e-14) < 1.0 );
+        REQUIRE( abs((x[5] - xref[5])/1e-14) < 1.0 );
     }
 }
 
@@ -300,12 +300,12 @@ TEST_CASE( "ilu_inplace", "[BlockDiagMat]" ) {
                 -43.36875, -19.25625, 19.5875};
         std::array<double, 6> x;
         ilu.solve(b.data(), x.data());
-        REQUIRE( abs(x[0] - xref[0]) < 1e-15 );
-        REQUIRE( abs(x[1] - xref[1]) < 1e-15 );
-        REQUIRE( abs(x[2] - xref[2]) < 1e-15 );
-        REQUIRE( abs(x[3] - xref[3]) < 1e-15 );
-        REQUIRE( abs(x[4] - xref[4]) < 1e-15 );
-        REQUIRE( abs(x[5] - xref[5]) < 1e-15 );
+        REQUIRE( abs((x[0] - xref[0])/1e-14) < 1 );
+        REQUIRE( abs((x[1] - xref[1])/1e-14) < 1 );
+        REQUIRE( abs((x[2] - xref[2])/1e-14) < 1 );
+        REQUIRE( abs((x[3] - xref[3])/1e-14) < 1 );
+        REQUIRE( abs((x[4] - xref[4])/1e-14) < 1 );
+        REQUIRE( abs((x[5] - xref[5])/1e-14) < 1 );
     }
 }
 
