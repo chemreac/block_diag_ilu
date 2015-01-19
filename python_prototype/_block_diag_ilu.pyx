@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 # -*- mode: cython-mode -*-
-# distutils: language = c++
-# distutils: extra_compile_args = -std=c++11 -DUNIT_TEST
-# distutils: libraries = ['lapack']
 
 # This wrapper is for debugging / testing purposes only,
 # it is fragile and can easily cause segfaults.

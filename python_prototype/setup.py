@@ -9,11 +9,15 @@ import numpy as np
 if __name__ == '__main__':
     kwargs = {
         'include_dirs': ['../include', np.get_include()],
-        'extra_compile_args': [],
-        'extra_link_args': []
+        'extra_compile_args': ['-std=c++11', '-DUNIT_TEST'],
+        'extra_link_args': [],
+        'language': 'c++'
     }
     if os.environ.get('WITH_BLOCK_DIAG_ILU_DGETRF', '0') == '1':
         kwargs['extra_compile_args'] += ['-DWITH_BLOCK_DIAG_ILU_DGETRF']
+    else:
+        kwargs['libraries'] = ['lapack']
+
     if os.environ.get('WITH_BLOCK_DIAG_ILU_OPENMP', '0') == '1':
         kwargs['extra_compile_args'] += ['-fopenmp', '-DWITH_BLOCK_DIAG_ILU_OPENMP']
         kwargs['extra_link_args'] += ['-fopenmp']
