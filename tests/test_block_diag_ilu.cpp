@@ -341,3 +341,33 @@ TEST_CASE( "dot_vec", "[BlockDiagMat]" ) {
     REQUIRE( abs(b[4] - bref[4]) < 1e-15 );
     REQUIRE( abs(b[5] - bref[5]) < 1e-15 );
 }
+
+TEST_CASE( "dot_vec2", "[BlockDiagMat]" ) {
+    const int blockw = 4;
+    const int nblocks = 3;
+    const int nx = blockw*nblocks;
+    const int ndiag = 2;
+    const int ndata = blockw*blockw*nblocks + \
+        2*block_diag_ilu::diag_store_len(nblocks, blockw, ndiag);
+
+    block_diag_ilu::BlockDiagMat bdm {nblocks, blockw, ndiag};
+    for (int i=0; i<ndata; ++i)
+        bdm.data[i] = i + 2.5;
+
+    std::array<double, nx> x;
+    for (int i=0; i<nx; ++i)
+        x[i] = 1.5*nblocks*blockw - 2.5*i;
+
+    std::array<double, nblocks*blockw> bref;
+    for (int i=0; i<nx; ++i){
+        double val = 0.0;
+        for (int j=0; j<nx; ++j){
+            val += x[j] * bdm.get(i, j);
+        }
+        bref[i] = val;
+    }
+    std::array<double, nblocks*blockw> b;
+    bdm.dot_vec(x.data(), b.data());
+    for (int i=0; i<nx; ++i)
+        REQUIRE( abs(b[i] - bref[i]) < 1e-15 );
+}
