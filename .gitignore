@@ -9,3 +9,4 @@ python_prototype/*/__pycache__
 python_prototype/*.png
 python_prototype/*.out
 .cache/
+build/

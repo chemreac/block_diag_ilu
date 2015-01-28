@@ -5,7 +5,7 @@ script:
   - cd tests
   - make
   - make clean
-  - make DEFINES=-DWITH_BLOCK_DIAG_ILU_DGETRF LIBS=""
+  - make DEFINES=-DWITH_BLOCK_DIAG_ILU_DGETRF
   - cd ../python_prototype
   - export PATH=$MINICONDA_PATH/bin:$PATH  # Cython present in miniconda installation
   - PYTHONPATH=. py.test
