@@ -5,8 +5,40 @@
 #include <array>
 #include <cmath>
 
+#include <iostream>
+block_diag_ilu::ColMajBlockDiagMat<double> get_test_case_colmajblockdiagmat(){
+    constexpr int nblocks = 3;
+    constexpr int blockw = 2;
+    constexpr int ndiag = 1;
+    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag};
+    // 5 3 2 # # #
+    // 5 8 # 3 # #
+    // 1 # 8 4 4 #
+    // # 2 4 4 # 5
+    // # # 3 # 6 9
+    // # # # 4 2 7
+    std::array<double, blockw*blockw*nblocks> blocks {{
+            5, 5, 3, 8,
+            8, 4, 4, 4,
+            6, 2, 9, 7}};
+    std::array<double,blockw*(nblocks-1)> sub {{
+            1, 2, 3, 4 }};
+    std::array<double,blockw*(nblocks-1)> sup {{
+            2, 3, 4, 5 }};
+    for (size_t bi=0; bi<3; ++bi)
+        for (size_t ci=0; ci<2; ++ci){
+            if (bi<2){
+                cmbdm.view.sub(0, bi, ci) = sub[bi*2+ci];
+                cmbdm.view.sup(0, bi, ci) = sup[bi*2+ci];
+            }
+            for (size_t ri=0; ri<2; ++ri)
+                cmbdm.view.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
+        }
+    return cmbdm;
+}
 
-TEST_CASE( "rowpiv2rowbycol" "[ILU]" ) {
+
+TEST_CASE( "rowpiv2rowbycol" "[ILU_inplace]" ) {
     const std::array<int, 5> piv {{3, 4, 5, 4, 5}};
     std::array<int, 5> rowbycol;
     block_diag_ilu::rowpiv2rowbycol(5, &piv[0], &rowbycol[0]);
@@ -17,7 +49,7 @@ TEST_CASE( "rowpiv2rowbycol" "[ILU]" ) {
     REQUIRE( rowbycol[4] == 0 );
 }
 
-TEST_CASE( "rowbycol2colbyrow" "[ILU]" ) {
+TEST_CASE( "rowbycol2colbyrow" "[ILU_inplace]" ) {
     const std::array<int, 5> rowbycol {{2, 3, 4, 1, 0}};
     std::array<int, 5> colbyrow;
     block_diag_ilu::rowbycol2colbyrow(5, &rowbycol[0], &colbyrow[0]);
@@ -28,22 +60,12 @@ TEST_CASE( "rowbycol2colbyrow" "[ILU]" ) {
     REQUIRE( colbyrow[4] == 2 );
 }
 
-TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU]" ) {
+TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU_inplace]" ) {
 
     // this is _get_test_m2 in test_fakelu.py
-    const int blockw = 2;
-    const int nblocks = 3;
-    const int ndiag = 1;
-    std::array<double, blockw*blockw*nblocks> block {{
-            5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
-    std::array<double, blockw*(nblocks-1)> sub {{1, 2, 3, 4}};
-    const std::array<double, blockw*(nblocks-1)> sup {{2, 3, 4, 5}};
-    block_diag_ilu::ILU ilu(block.data(), sub.data(), sup.data(),
-                            nblocks, blockw, ndiag);
-
-    REQUIRE( ilu.nblocks == nblocks );
-    REQUIRE( ilu.blockw == blockw );
-    REQUIRE( ilu.ndiag == ndiag );
+    auto cmbdm = get_test_case_colmajblockdiagmat();
+    auto cmbdv = cmbdm.view;
+    block_diag_ilu::ILU_inplace ilu(cmbdv);
 
     SECTION( "check lower correctly computed" ) {
         REQUIRE( ilu.sub_get(0, 0, 0) == 1/5. );
@@ -82,12 +104,13 @@ TEST_CASE( "_get_test_m4 in test_fakelu.py", "[ILU]" ) {
             -17, 37, 63, 13, 11, -42, 72, 24, 72, 14, -13, -57}};
     std::array<double, 6> sub {{.1, .2, -.1, .08, .03, -.1}};
     const std::array<double, 6> sup {{.2, .3, -.1, .2, .02, .03}};
-    block_diag_ilu::ILU ilu(block.data(), sub.data(), sup.data(),
-                            nblocks, blockw, ndiag);
+    block_diag_ilu::ColMajBlockDiagView<double> cmbdv {
+        (double*)block.data(), (double*)sub.data(), (double*)sup.data(), nblocks, blockw, ndiag};
+    block_diag_ilu::ILU_inplace ilu(cmbdv);
 
-    REQUIRE( ilu.nblocks == nblocks );
-    REQUIRE( ilu.blockw == blockw );
-    REQUIRE( ilu.ndiag == ndiag );
+    REQUIRE( ilu.nblocks() == nblocks );
+    REQUIRE( ilu.blockw() == blockw );
+    REQUIRE( ilu.ndiag() == ndiag );
 
     SECTION( "check lower correctly computed" ) {
         REQUIRE( std::abs(ilu.sub_get(0, 0, 0) - .1/37 ) < 1e-15 );
@@ -125,213 +148,154 @@ TEST_CASE( "_get_test_m4 in test_fakelu.py", "[ILU]" ) {
     }
 }
 
-TEST_CASE( "addressing", "[BlockDiagMat]" ) {
-    block_diag_ilu::BlockDiagMat m {3, 2, 1};
-    std::array<double, 2*2*3+2*2+2*2> d {{
-        1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11, 12,
-            13, 14, 15, 16,
-            17, 18, 19, 20
-            }};
-    for (size_t i=0; i<d.size(); ++i)
-        m.data[i] = d[i];
+TEST_CASE( "addressing", "[ColMajBlockDiagView]" ) {
+    std::array<double, 2*2*3> blocks {{1, 2, 3, 4,
+                5, 6, 7, 8,
+                9, 10, 11, 12 }};
+    std::array<double, 2*2> sub {{
+            13, 14, 15, 16 }};
+    std::array<double, 2*2> sup {{
+            17, 18, 19, 20 }};
+    block_diag_ilu::ColMajBlockDiagView<double> v {
+        blocks.data(), sub.data(), sup.data(), 3, 2, 1};
 
     SECTION( "block" ) {
-        REQUIRE( m.block(0, 0, 0) == d[0] );
-        REQUIRE( m.block(0, 1, 0) == d[1] );
-        REQUIRE( m.block(0, 0, 1) == d[2] );
-        REQUIRE( m.block(0, 1, 1) == d[3] );
+        REQUIRE( v.block(0, 0, 0) == blocks[0] );
+        REQUIRE( v.block(0, 1, 0) == blocks[1] );
+        REQUIRE( v.block(0, 0, 1) == blocks[2] );
+        REQUIRE( v.block(0, 1, 1) == blocks[3] );
 
-        REQUIRE( m.block(1, 0, 0) == d[4] );
-        REQUIRE( m.block(1, 1, 0) == d[5] );
-        REQUIRE( m.block(1, 0, 1) == d[6] );
-        REQUIRE( m.block(1, 1, 1) == d[7] );
+        REQUIRE( v.block(1, 0, 0) == blocks[4] );
+        REQUIRE( v.block(1, 1, 0) == blocks[5] );
+        REQUIRE( v.block(1, 0, 1) == blocks[6] );
+        REQUIRE( v.block(1, 1, 1) == blocks[7] );
 
-        REQUIRE( m.block(2, 0, 0) == d[8] );
-        REQUIRE( m.block(2, 1, 0) == d[9] );
-        REQUIRE( m.block(2, 0, 1) == d[10] );
-        REQUIRE( m.block(2, 1, 1) == d[11] );
+        REQUIRE( v.block(2, 0, 0) == blocks[8] );
+        REQUIRE( v.block(2, 1, 0) == blocks[9] );
+        REQUIRE( v.block(2, 0, 1) == blocks[10] );
+        REQUIRE( v.block(2, 1, 1) == blocks[11] );
     }
     SECTION( "sub" ) {
-        REQUIRE( m.sub(0, 0, 0) == d[12] );
-        REQUIRE( m.sub(0, 0, 1) == d[13] );
-        REQUIRE( m.sub(0, 1, 0) == d[14] );
-        REQUIRE( m.sub(0, 1, 1) == d[15] );
+        REQUIRE( v.sub(0, 0, 0) == sub[0] );
+        REQUIRE( v.sub(0, 0, 1) == sub[1] );
+        REQUIRE( v.sub(0, 1, 0) == sub[2] );
+        REQUIRE( v.sub(0, 1, 1) == sub[3] );
     }
     SECTION( "sup" ) {
-        REQUIRE( m.sup(0, 0, 0) == d[16] );
-        REQUIRE( m.sup(0, 0, 1) == d[17] );
-        REQUIRE( m.sup(0, 1, 0) == d[18] );
-        REQUIRE( m.sup(0, 1, 1) == d[19] );
+        REQUIRE( v.sup(0, 0, 0) == sup[0] );
+        REQUIRE( v.sup(0, 0, 1) == sup[1] );
+        REQUIRE( v.sup(0, 1, 0) == sup[2] );
+        REQUIRE( v.sup(0, 1, 1) == sup[3] );
     }
 }
 
-TEST_CASE( "addressing multi diag", "[BlockDiagMat]" ) {
-    block_diag_ilu::BlockDiagMat m {3, 2, 2};
-    std::array<double, 2*2*3+2*2*(2+1)> d {{
-        1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11, 12,
-            13, 14, 15, 16,
-            91, 92,
-            17, 18, 19, 20,
-            81, 82
+TEST_CASE( "addressing multi diag", "[ColMajBlockDiagView]" ) {
+    auto X = -99.0;
+    std::array<double, 2*3*3+2> blocks {{ 
+            1, 2, X,
+                3, 4, X,
+                X,
+                5, 6, X,
+                7, 8, X,
+                X,
+                9, 10, X,
+                11, 12, X,
             }};
-    for (size_t i=0; i<d.size(); ++i)
-        m.data[i] = d[i];
+    std::array<double, 3*(2+1)> sub {{
+            13, 14, X, 15, 16, X,
+                91, 92, X}};
+    std::array<double, 3*(2+1)> sup {{
+            17, 18, X, 19, 20, X,
+                81, 82, X}};
+    block_diag_ilu::ColMajBlockDiagView<double> v {blocks.data(), sub.data(), sup.data(), 3, 2, 2, 3, 7, 3};
 
     SECTION( "block" ) {
-        REQUIRE( m.block(0, 0, 0) == d[0] );
-        REQUIRE( m.block(0, 1, 0) == d[1] );
-        REQUIRE( m.block(0, 0, 1) == d[2] );
-        REQUIRE( m.block(0, 1, 1) == d[3] );
+        REQUIRE( v.block(0, 0, 0) == 1 );
+        REQUIRE( v.block(0, 1, 0) == 2 );
+        REQUIRE( v.block(0, 0, 1) == 3 );
+        REQUIRE( v.block(0, 1, 1) == 4 );
 
-        REQUIRE( m.block(1, 0, 0) == d[4] );
-        REQUIRE( m.block(1, 1, 0) == d[5] );
-        REQUIRE( m.block(1, 0, 1) == d[6] );
-        REQUIRE( m.block(1, 1, 1) == d[7] );
+        REQUIRE( v.block(1, 0, 0) == 5 );
+        REQUIRE( v.block(1, 1, 0) == 6 );
+        REQUIRE( v.block(1, 0, 1) == 7 );
+        REQUIRE( v.block(1, 1, 1) == 8 );
 
-        REQUIRE( m.block(2, 0, 0) == d[8] );
-        REQUIRE( m.block(2, 1, 0) == d[9] );
-        REQUIRE( m.block(2, 0, 1) == d[10] );
-        REQUIRE( m.block(2, 1, 1) == d[11] );
+        REQUIRE( v.block(2, 0, 0) == 9 );
+        REQUIRE( v.block(2, 1, 0) == 10 );
+        REQUIRE( v.block(2, 0, 1) == 11 );
+        REQUIRE( v.block(2, 1, 1) == 12 );
     }
     SECTION( "sub" ) {
-        REQUIRE( m.sub(0, 0, 0) == d[12] );
-        REQUIRE( m.sub(0, 0, 1) == d[13] );
-        REQUIRE( m.sub(0, 1, 0) == d[14] );
-        REQUIRE( m.sub(0, 1, 1) == d[15] );
+        REQUIRE( v.sub(0, 0, 0) == 13 );
+        REQUIRE( v.sub(0, 0, 1) == 14 );
+        REQUIRE( v.sub(0, 1, 0) == 15 );
+        REQUIRE( v.sub(0, 1, 1) == 16 );
 
-        REQUIRE( m.sub(1, 0, 0) == d[16] );
-        REQUIRE( m.sub(1, 0, 1) == d[17] );
+        REQUIRE( v.sub(1, 0, 0) == 91 );
+        REQUIRE( v.sub(1, 0, 1) == 92 );
     }
     SECTION( "sup" ) {
-        REQUIRE( m.sup(0, 0, 0) == d[18] );
-        REQUIRE( m.sup(0, 0, 1) == d[19] );
-        REQUIRE( m.sup(0, 1, 0) == d[20] );
-        REQUIRE( m.sup(0, 1, 1) == d[21] );
+        REQUIRE( v.sup(0, 0, 0) == 17 );
+        REQUIRE( v.sup(0, 0, 1) == 18 );
+        REQUIRE( v.sup(0, 1, 0) == 19 );
+        REQUIRE( v.sup(0, 1, 1) == 20 );
 
-        REQUIRE( m.sup(1, 0, 0) == d[22] );
-        REQUIRE( m.sup(1, 0, 1) == d[23] );
+        REQUIRE( v.sup(1, 0, 0) == 81 );
+        REQUIRE( v.sup(1, 0, 1) == 82 );
     }
 }
 
-TEST_CASE( "set_to_1_minus_gamma_times_other", "[BlockDiagMat]" ) {
-    block_diag_ilu::BlockDiagMat m {3, 2, 1};
-    std::array<double, 2*2*3+2*2+2*2> d {{
-        1, 2, 3, 4,
-            5, 6, 7, 8,
-            9, 10, 11, 12,
-            13, 14, 15, 16,
-            17, 18, 19, 20
-            }};
-    for (size_t i=0; i<d.size(); ++i)
-        m.data[i] = d[i];
+TEST_CASE( "set_to_1_minus_gamma_times_other", "[ColMajBlockDiagView]" ) {
+    std::array<double, 2*2*3> blocks {{1, 2, 3, 4,
+                5, 6, 7, 8,
+                9, 10, 11, 12 }};
+    std::array<double, 2*2> sub {{
+            13, 14, 15, 16 }};
+    std::array<double, 2*2> sup {{
+            17, 18, 19, 20 }};
+    block_diag_ilu::ColMajBlockDiagView<double> v {
+        blocks.data(), sub.data(), sup.data(), 3, 2, 1};
 
-    block_diag_ilu::BlockDiagMat n {3, 2, 1};
+    block_diag_ilu::ColMajBlockDiagMat<double> m {3, 2, 1};
     double gamma = 0.7;
-    n.set_to_1_minus_gamma_times_other(gamma, m);
+    m.view.set_to_1_minus_gamma_times_view(gamma, v);
 
     SECTION( "block" ) {
-        REQUIRE( n.block(0, 0, 0) == 1-gamma*d[0] );
-        REQUIRE( n.block(0, 1, 0) == -gamma*d[1] );
-        REQUIRE( n.block(0, 0, 1) == -gamma*d[2] );
-        REQUIRE( n.block(0, 1, 1) == 1-gamma*d[3] );
+        REQUIRE( m.view.block(0, 0, 0) == 1-gamma*blocks[0] );
+        REQUIRE( m.view.block(0, 1, 0) == -gamma*blocks[1] );
+        REQUIRE( m.view.block(0, 0, 1) == -gamma*blocks[2] );
+        REQUIRE( m.view.block(0, 1, 1) == 1-gamma*blocks[3] );
 
-        REQUIRE( n.block(1, 0, 0) == 1-gamma*d[4] );
-        REQUIRE( n.block(1, 1, 0) == -gamma*d[5] );
-        REQUIRE( n.block(1, 0, 1) == -gamma*d[6] );
-        REQUIRE( n.block(1, 1, 1) == 1-gamma*d[7] );
+        REQUIRE( m.view.block(1, 0, 0) == 1-gamma*blocks[4] );
+        REQUIRE( m.view.block(1, 1, 0) == -gamma*blocks[5] );
+        REQUIRE( m.view.block(1, 0, 1) == -gamma*blocks[6] );
+        REQUIRE( m.view.block(1, 1, 1) == 1-gamma*blocks[7] );
 
-        REQUIRE( n.block(2, 0, 0) == 1-gamma*d[8] );
-        REQUIRE( n.block(2, 1, 0) == -gamma*d[9] );
-        REQUIRE( n.block(2, 0, 1) == -gamma*d[10] );
-        REQUIRE( n.block(2, 1, 1) == 1-gamma*d[11] );
+        REQUIRE( m.view.block(2, 0, 0) == 1-gamma*blocks[8] );
+        REQUIRE( m.view.block(2, 1, 0) == -gamma*blocks[9] );
+        REQUIRE( m.view.block(2, 0, 1) == -gamma*blocks[10] );
+        REQUIRE( m.view.block(2, 1, 1) == 1-gamma*blocks[11] );
     }
     SECTION( "sub" ) {
-        REQUIRE( n.sub(0, 0, 0) == -gamma*d[12] );
-        REQUIRE( n.sub(0, 0, 1) == -gamma*d[13] );
-        REQUIRE( n.sub(0, 1, 0) == -gamma*d[14] );
-        REQUIRE( n.sub(0, 1, 1) == -gamma*d[15] );
+        REQUIRE( m.view.sub(0, 0, 0) == -gamma*sub[0] );
+        REQUIRE( m.view.sub(0, 0, 1) == -gamma*sub[1] );
+        REQUIRE( m.view.sub(0, 1, 0) == -gamma*sub[2] );
+        REQUIRE( m.view.sub(0, 1, 1) == -gamma*sub[3] );
     }
     SECTION( "sup" ) {
-        REQUIRE( n.sup(0, 0, 0) == -gamma*d[16] );
-        REQUIRE( n.sup(0, 0, 1) == -gamma*d[17] );
-        REQUIRE( n.sup(0, 1, 0) == -gamma*d[18] );
-        REQUIRE( n.sup(0, 1, 1) == -gamma*d[19] );
+        REQUIRE( m.view.sup(0, 0, 0) == -gamma*sup[0] );
+        REQUIRE( m.view.sup(0, 0, 1) == -gamma*sup[1] );
+        REQUIRE( m.view.sup(0, 1, 0) == -gamma*sup[2] );
+        REQUIRE( m.view.sup(0, 1, 1) == -gamma*sup[3] );
     }
 }
 
-TEST_CASE( "ilu_inplace", "[BlockDiagMat]" ) {
 
+TEST_CASE( "dot_vec", "[ColMajBlockDiagMat]" ) {
     // this is _get_test_m2 in test_fakelu.py
     const int blockw = 2;
     const int nblocks = 3;
-    const int ndiag = 1;
-    block_diag_ilu::BlockDiagMat bdm {nblocks, blockw, ndiag};
-    std::array<double, blockw*blockw*nblocks+2*blockw*(nblocks-1)> d {{
-        5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
-            1, 2, 3, 4,
-            2, 3, 4, 5
-            }};
-    for (size_t i=0; i<d.size(); ++i)
-        bdm.data[i] = d[i];
-
-    block_diag_ilu::ILU ilu = bdm.ilu_inplace();
-
-    REQUIRE( ilu.nblocks == nblocks );
-    REQUIRE( ilu.blockw == blockw );
-    REQUIRE( ilu.ndiag == ndiag );
-
-    SECTION( "check lower correctly computed" ) {
-        REQUIRE( ilu.sub_get(0, 0, 0) == 1/5. );
-        REQUIRE( ilu.sub_get(0, 0, 1) == 2/5. );
-        REQUIRE( ilu.sub_get(0, 1, 0) == 3/8. );
-        REQUIRE( ilu.sub_get(0, 1, 1) == 4/2. );
-    }
-    SECTION( "check upper still perserved" ) {
-        REQUIRE( ilu.sup_get(0, 0, 0) == 2 );
-        REQUIRE( ilu.sup_get(0, 0, 1) == 3 );
-        REQUIRE( ilu.sup_get(0, 1, 0) == 4 );
-        REQUIRE( ilu.sup_get(0, 1, 1) == 5 );
-    }
-    SECTION( "solve performs adequately" ) {
-        std::array<double, 6> b {{65, 202, 11, 65, 60, 121}};
-        std::array<double, 6> xref {{-31.47775, 53.42125, 31.0625,
-                    -43.36875, -19.25625, 19.5875}};
-        std::array<double, 6> x;
-        ilu.solve(b.data(), x.data());
-        REQUIRE( std::abs((x[0] - xref[0])/1e-14) < 1 );
-        REQUIRE( std::abs((x[1] - xref[1])/1e-14) < 1 );
-        REQUIRE( std::abs((x[2] - xref[2])/1e-14) < 1 );
-        REQUIRE( std::abs((x[3] - xref[3])/1e-14) < 1 );
-        REQUIRE( std::abs((x[4] - xref[4])/1e-14) < 1 );
-        REQUIRE( std::abs((x[5] - xref[5])/1e-14) < 1 );
-    }
-}
-
-TEST_CASE( "dot_vec", "[BlockDiagMat]" ) {
-    // this is _get_test_m2 in test_fakelu.py
-    const int blockw = 2;
-    const int nblocks = 3;
-    const int ndiag = 1;
-    block_diag_ilu::BlockDiagMat bdm {nblocks, blockw, ndiag};
-    // 5 3 2 # # #
-    // 5 8 # 3 # #
-    // 1 # 8 4 4 #
-    // # 2 4 4 # 5
-    // # # 3 # 6 9
-    // # # # 4 2 7
-    std::array<double, blockw*blockw*nblocks+2*blockw*(nblocks-1)> d {{
-        5, 5, 3, 8,
-            8, 4, 4, 4,
-            6, 2, 9, 7,
-            1, 2, 3, 4,
-            2, 3, 4, 5
-            }};
-    for (size_t i=0; i<d.size(); ++i)
-        bdm.data[i] = d[i];
+    auto cmbdm = get_test_case_colmajblockdiagmat();
     const std::array<double, nblocks*blockw> x {{3, 2, 6, 2, 5, 4}};
     const std::array<double, nblocks*blockw> bref {{
         5*3 + 3*2 + 2*6,
@@ -341,7 +305,7 @@ TEST_CASE( "dot_vec", "[BlockDiagMat]" ) {
             6*5 + 9*4 + 3*6,
             2*5 + 7*4 + 4*2}};
     std::array<double, nblocks*blockw> b;
-    bdm.dot_vec(x.data(), b.data());
+    cmbdm.view.dot_vec(x.data(), b.data());
     REQUIRE( std::abs(b[0] - bref[0]) < 1e-15 );
     REQUIRE( std::abs(b[1] - bref[1]) < 1e-15 );
     REQUIRE( std::abs(b[2] - bref[2]) < 1e-15 );
@@ -350,80 +314,20 @@ TEST_CASE( "dot_vec", "[BlockDiagMat]" ) {
     REQUIRE( std::abs(b[5] - bref[5]) < 1e-15 );
 }
 
-TEST_CASE( "dot_vec2", "[BlockDiagMat]" ) {
-    const int blockw = 4;
-    const int nblocks = 3;
-    const int nx = blockw*nblocks;
-    const int ndiag = 2;
-    const int ndata = blockw*blockw*nblocks + \
-        2*block_diag_ilu::diag_store_len(nblocks, blockw, ndiag);
-
-    block_diag_ilu::BlockDiagMat bdm {nblocks, blockw, ndiag};
-    for (int i=0; i<ndata; ++i)
-        bdm.data[i] = i + 2.5;
-
-    std::array<double, nx> x;
-    for (int i=0; i<nx; ++i)
-        x[i] = 1.5*nblocks*blockw - 2.5*i;
-
-    std::array<double, nblocks*blockw> bref;
-    for (int i=0; i<nx; ++i){
-        double val = 0.0;
-        for (int j=0; j<nx; ++j){
-            val += x[j] * bdm.get(i, j);
-        }
-        bref[i] = val;
-    }
-    std::array<double, nblocks*blockw> b;
-    bdm.dot_vec(x.data(), b.data());
-    for (int i=0; i<nx; ++i)
-        REQUIRE( std::abs(b[i] - bref[i]) < 1e-15 );
-}
-
-#include <iostream> //DEBUG
-// TEST_CASE( "factor_lu", "[ColMajBlockDiagMat]" ) {
-
-//     const int blockw = 2;
-//     const int nblocks = 3;
-//     const int ndiag = 1;
-//     std::cout << "A" << std::endl; std::cout.flush(); //DEBUG
-//     block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag};
-//     std::array<double, blockw*blockw*nblocks> block_d {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
-//     std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4}};
-//     std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5}};
-//     std::cout << "B" << std::endl;std::cout.flush(); //DEBUG
-//     memcpy(cmbdm.block_data.get(), &block_d[0], sizeof(double)*block_d.size());
-//     memcpy(cmbdm.sub_data.get(), &sub_d[0], sizeof(double)*sub_d.size());
-//     memcpy(cmbdm.sup_data.get(), &sup_d[0], sizeof(double)*sup_d.size());
-//     std::cout << "C" << std::endl;std::cout.flush(); //DEBUG
-//     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
-//     std::array<double, blockw*nblocks> x;
-//     std::array<double, blockw*nblocks> b;
-//     cmbdm.dot_vec(&xref[0], &b[0]);
-//     std::cout << "D" << std::endl;std::cout.flush(); //DEBUG
-//     auto lu = cmbdm.factor_lu();
-//     std::cout << "E" << std::endl;std::cout.flush(); //DEBUG
-//     lu.solve(&b[0], &x[0]);
-//     std::cout << "F" << std::endl;std::cout.flush(); //DEBUG
-
-//     for (size_t i=0; i<blockw*nblocks; ++i)
-//         REQUIRE( std::abs((x[i] - xref[i])/1e-14) < 1 );
-// }
-
 TEST_CASE( "get_global", "[ColMajBlockDiagView]" ) {
     const int blockw = 2;
     const int nblocks = 3;
-    const int ndiag = 1;
+    const int ndiag = 2;
     auto X = -99;
-    // 5 3 2 # # #
-    // 5 8 # 3 # #
+    // 5 3 2 # 6 #
+    // 5 8 # 3 # 7
     // 1 # 8 4 4 #
     // # 2 4 4 # 5
-    // # # 3 # 6 9
-    // # # # 4 2 7
+    // 5 # 3 # 6 9
+    // # 6 # 4 2 7
     std::array<double, blockw*blockw*nblocks> block_d {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
-    std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4}};
-    std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5}};
+    std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4, 5, 6}};
+    std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5, 6, 7}};
     block_diag_ilu::ColMajBlockDiagView<double> cmbdv {&block_d[0], &sub_d[0], &sup_d[0], nblocks, blockw, ndiag};
 
     // sub
@@ -431,12 +335,17 @@ TEST_CASE( "get_global", "[ColMajBlockDiagView]" ) {
     REQUIRE( std::abs((cmbdv.sub(0, 0, 1) - 2)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.sub(0, 1, 0) - 3)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.sub(0, 1, 1) - 4)/1e-15) < 1 );
+
+    REQUIRE( std::abs((cmbdv.sub(1, 0, 0) - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((cmbdv.sub(1, 0, 1) - 6)/1e-15) < 1 );
     // sup
     REQUIRE( std::abs((cmbdv.sup(0, 0, 0) - 2)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.sup(0, 0, 1) - 3)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.sup(0, 1, 0) - 4)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.sup(0, 1, 1) - 5)/1e-15) < 1 );
 
+    REQUIRE( std::abs((cmbdv.sup(1, 0, 0) - 6)/1e-15) < 1 );
+    REQUIRE( std::abs((cmbdv.sup(1, 0, 1) - 7)/1e-15) < 1 );
     // block
     REQUIRE( std::abs((cmbdv.block(0, 0, 0) - 5)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.block(0, 1, 0) - 5)/1e-15) < 1 );
@@ -479,6 +388,46 @@ TEST_CASE( "get_global", "[ColMajBlockDiagView]" ) {
     REQUIRE( std::abs((cmbdv.get_global(3, 5) - 5)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.get_global(4, 5) - 9)/1e-15) < 1 );
     REQUIRE( std::abs((cmbdv.get_global(5, 5) - 7)/1e-15) < 1 );
+}
+
+TEST_CASE( "dot_vec2", "[ColMajBlockDiagMat]" ) {
+    const int blockw = 4;
+    const int nblocks = 3;
+    const int nx = blockw*nblocks;
+    const int ndiag = 2;
+
+    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag};
+    for (size_t bi=0; bi<nblocks; ++bi)
+        for (size_t ci=0; ci<blockw; ++ci){
+            for (size_t ri=0; ri<blockw; ++ri)
+                cmbdm.view.block(bi, ri, ci) = 1.2*bi + 4.1*ci - 2.7*ri;
+        }
+
+    for (int di=0; di<ndiag; ++di){
+        for (int bi=0; bi<nblocks-di-1; ++bi){
+            for (int ci=0; ci<blockw; ++ci){
+                cmbdm.view.sub(di, bi, ci) = 1.5*bi + 0.6*ci - 0.1*di;
+                cmbdm.view.sup(di, bi, ci) = 3.7*bi - 0.3*ci + 0.2*di;
+            }
+        }
+    }
+
+    std::array<double, nx> x;
+    for (int i=0; i<nx; ++i)
+        x[i] = 1.5*nblocks*blockw - 2.7*i;
+
+    std::array<double, nblocks*blockw> bref;
+    for (int ri=0; ri<nx; ++ri){
+        double val = 0.0;
+        for (int ci=0; ci<nx; ++ci){
+            val += x[ci] * cmbdm.view.get_global(ri, ci);
+        }
+        bref[ri] = val;
+    }
+    std::array<double, nblocks*blockw> b;
+    cmbdm.view.dot_vec(x.data(), b.data());
+    for (int i=0; i<nx; ++i)
+        REQUIRE( std::abs((b[i] - bref[i])/5e-14) < 1 );
 }
 
 

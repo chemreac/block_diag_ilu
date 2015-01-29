@@ -2,12 +2,13 @@
 # -*- mode: cython-mode -*-
 
 cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
-    cdef cppclass ILU:
-        const int nblocks, blockw, ndiag
-        ILU(double * const, 
-            double * const,
-            const double * const,
-            int, int, int, int)
+    cdef cppclass ColMajBlockDiagView[T]:
+        ColMajBlockDiagView(T * const, T * const, T * const, const size_t, const int, const int)
+    cdef cppclass ILU_inplace:
+        int nblocks()
+        int blockw()
+        int ndiag()
+        ILU_inplace(ColMajBlockDiagView[double])
         void solve(const double * const, double * const)
         double sub_get(const int, const int, const int)
         double sup_get(const int, const int, const int)
