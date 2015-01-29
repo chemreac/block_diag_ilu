@@ -6,10 +6,13 @@
 
 cimport numpy as cnp
 import numpy as np
-from block_diag_ilu cimport ILU
+from block_diag_ilu cimport ColMajBlockDiagView, ILU_inplace
+
+from cython.operator cimport dereference as deref
 
 cdef class PyILU:
-    cdef ILU *thisptr
+    cdef ILU_inplace *thisptr
+    cdef ColMajBlockDiagView[double] *viewptr
     cdef double[::1, :] A
     cdef double[::1] sup, sub
     cdef public int nblocks, blockw, ndiag
@@ -32,18 +35,20 @@ cdef class PyILU:
         self.A = A
         self.sup = sup
         self.sub = sub
-        self.thisptr = new ILU(&self.A[0,0], &sub[0], &self.sup[0],
-                               self.nblocks, blockw, ndiag, blockw)
+        self.viewptr = new ColMajBlockDiagView[double](&self.A[0,0], &self.sub[0], &self.sup[0],
+                                                       self.nblocks, blockw, ndiag)
+        self.thisptr = new ILU_inplace(deref(self.viewptr))
 
     def __dealloc__(self):
         del self.thisptr
+        del self.viewptr
 
     def get_LU(self):
         return self.A
 
     def solve(self, double[::1] b):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.empty(b.size)
-        assert b.shape[0] == self.thisptr.nblocks*self.thisptr.blockw
+        assert b.shape[0] == self.thisptr.nblocks()*self.thisptr.blockw()
         self.thisptr.solve(&b[0], &x[0])
         return x
 
