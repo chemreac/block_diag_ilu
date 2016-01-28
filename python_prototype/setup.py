@@ -9,7 +9,7 @@ import numpy as np
 if __name__ == '__main__':
     kwargs = {
         'include_dirs': ['../include', np.get_include()],
-        'extra_compile_args': ['-std=c++11', '-DUNIT_TEST'],
+        'extra_compile_args': ['-std=c++11', '-DBLOCK_DIAG_ILU_UNIT_TEST'],
         'extra_link_args': [],
         'language': 'c++'
     }
