@@ -1,8 +1,8 @@
 block_diag_ilu
 ==============
 
-.. image:: http://hera.physchem.kth.se:9090/api/badges/bjodah/block_diag_ilu/status.svg
-   :target: http://hera.physchem.kth.se:9090/bjodah/block_diag_ilu
+.. image:: http://hera.physchem.kth.se:9090/api/badges/chemreac/block_diag_ilu/status.svg
+   :target: http://hera.physchem.kth.se:9090/chemreac/block_diag_ilu
    :alt: Build status
 
 

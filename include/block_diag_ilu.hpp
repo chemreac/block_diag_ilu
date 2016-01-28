@@ -24,6 +24,7 @@
 namespace block_diag_ilu {
 
     // make_unique<T[]>() only in C++14, work around:
+    // The part below is covered by the CC wiki license.
     // begin copy paste from http://stackoverflow.com/a/10150181/790973
     template <class T, class ...Args>
     typename std::enable_if
@@ -127,19 +128,25 @@ namespace block_diag_ilu {
             // out need not be zeroed out before call
             const auto nblk = this->nblocks;
             const auto blkw = this->blockw;
-            for (std::size_t i=0; i<nblk*blkw; ++i)
+            for (std::size_t i=0; i<nblk*blkw; ++i){
                 out[i] = 0.0;
-            for (std::size_t bri=0; bri<nblk; ++bri)
-                for (int lci=0; lci<blkw; ++lci)
-                    for (int lri=0; lri<blkw; ++lri)
+            }
+            for (std::size_t bri=0; bri<nblk; ++bri){
+                for (int lci=0; lci<blkw; ++lci){
+                    for (int lri=0; lri<blkw; ++lri){
                         out[bri*blkw + lri] += vec[bri*blkw + lci]*\
                             (this->block(bri, lri, lci));
-            for (int di=0; di<this->ndiag; ++di)
-                for (std::size_t bi=0; bi<nblk-di-1; ++bi)
+                    }
+                }
+            }
+            for (int di=0; di<this->ndiag; ++di){
+                for (std::size_t bi=0; bi<nblk-di-1; ++bi){
                     for (int ci=0; ci<blkw; ++ci){
                         out[bi*blkw + ci] += this->sup(di, bi, ci)*vec[(bi+di+1)*blkw+ci];
                         out[(bi+di+1)*blkw + ci] += this->sub(di, bi, ci)*vec[bi*blkw+ci];
                     }
+                }
+            }
         }
         Real_t rms_diag(int diag_idx) {
             // returns the root means square of `diag_idx`:th diagonal
@@ -149,29 +156,32 @@ namespace block_diag_ilu {
             std::size_t nelem;
             if (diag_idx == 0){
                 nelem = (this->nblocks)*(this->blockw);
-                for (std::size_t bi = 0; bi < (this->nblocks); ++bi)
+                for (std::size_t bi = 0; bi < (this->nblocks); ++bi){
                     for (int ci = 0; ci < (this->blockw); ++ci){
                         const Real_t elem = this->block(bi, ci, ci);
                         sum += elem*elem;
                     }
+                }
             } else if (diag_idx < 0) {
                 if ((unsigned)(-diag_idx) >= this->nblocks)
                     return 0;
                 nelem = (this->nblocks + diag_idx)*(this->blockw);
-                for (std::size_t bi = 0; bi < (this->nblocks)+diag_idx ; ++bi)
+                for (std::size_t bi = 0; bi < (this->nblocks)+diag_idx ; ++bi){
                     for (int ci = 0; ci < (this->blockw); ++ci){
                         const Real_t elem = this->sub(-diag_idx - 1, bi, ci);
                         sum += elem*elem;
                     }
+                }
             } else {
                 if ((unsigned)diag_idx >= this->nblocks)
                     return 0;
                 nelem = (this->nblocks - diag_idx)*(this->blockw);
-                for (std::size_t bi = 0; bi < (this->nblocks)-diag_idx ; ++bi)
+                for (std::size_t bi = 0; bi < (this->nblocks)-diag_idx ; ++bi){
                     for (int ci = 0; ci < (this->blockw); ++ci){
                         const Real_t elem = this->sup(diag_idx - 1, bi, ci);
                         sum += elem*elem;
                     }
+                }
             }
             return std::sqrt(sum/nelem);
         }
@@ -237,23 +247,29 @@ namespace block_diag_ilu {
             const auto nblocks = this->nblocks;
             const auto blockw = this->blockw;
             // Scale main blocks by -gamma
-            for (std::size_t bi = 0; bi < nblocks; ++bi)
-                for (int ci=0; ci < blockw; ++ci)
-                    for (int ri = 0; ri < blockw; ++ri)
+            for (std::size_t bi = 0; bi < nblocks; ++bi){
+                for (int ci=0; ci < blockw; ++ci){
+                    for (int ri = 0; ri < blockw; ++ri){
                         this->block(bi, ri, ci) = -gamma*other.block(bi, ri, ci);
+                    }
+                }
+            }
 
             // Add the identiy matrix
-            for (std::size_t bi = 0; bi < nblocks; ++bi)
-                for (int ci = 0; ci < blockw; ++ci)
+            for (std::size_t bi = 0; bi < nblocks; ++bi){
+                for (int ci = 0; ci < blockw; ++ci){
                     this->block(bi, ci, ci) += 1;
-
+                }
+            }
             // Scale diagonals by -gamma
-            for (int di = 0; di < this->ndiag; ++di)
-                for (std::size_t bi=0; bi < ((nblocks <= (unsigned)di+1) ? 0 : nblocks - di - 1); ++bi)
+            for (int di = 0; di < this->ndiag; ++di) {
+                for (std::size_t bi=0; bi < ((nblocks <= (unsigned)di+1) ? 0 : nblocks - di - 1); ++bi) {
                     for (int ci = 0; ci < blockw; ++ci){
                         this->sub(di, bi, ci) = -gamma*other.sub(di, bi, ci);
                         this->sup(di, bi, ci) = -gamma*other.sup(di, bi, ci);
                     }
+                }
+            }
         }
         inline void zero_out_blocks() noexcept {
             for (std::size_t i=0; i<(this->block_data_len); ++i){
@@ -285,7 +301,7 @@ namespace block_diag_ilu {
         }
     };
 
-    class LU {
+    class LU {  // Wrapper around DGBTRF & DGBTRS from LAPACK
 #ifdef UNIT_TEST
     public:
 #endif
@@ -482,8 +498,9 @@ namespace block_diag_ilu {
             for (std::size_t bri = nblocks; bri > 0; --bri){
                 for (int li = blockw; li > 0; --li){
                     double s = 0.0;
-                    for (int ci = li; ci < blockw; ++ci)
+                    for (int ci = li; ci < blockw; ++ci){
                         s += this->view.block(bri-1, li-1, ci)*x[(bri-1)*blockw + ci];
+                    }
                     for (int di = 1; di <= ndiag; ++di) {
                         if ((bri-1) < nblocks - di){
                             int ci = this->colbyrow[(bri-1)*blockw + li-1];
