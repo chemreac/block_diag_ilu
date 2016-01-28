@@ -4,8 +4,9 @@
 #include <type_traits>
 #include <utility>
 #include <memory>
-#include <cmath> // std::abs for float and double
+#include <cmath> // std::abs for float and double, std::sqrt
 #include <cstdlib> // std::abs for int (must include!!)
+#include <cstring> // memcpy
 
 #ifndef NDEBUG
 #include <vector>
@@ -49,7 +50,7 @@ namespace block_diag_ilu {
     // end copy paste from http://stackoverflow.com/a/10150181/790973
 
     // Let's define an alias template for a buffer type which may
-    // use (conditional compilation) either std::unique_ptr or std::vector 
+    // use (conditional compilation) either std::unique_ptr or std::vector
     // as underlying data structure.
 
 #ifdef NDEBUG
@@ -59,7 +60,7 @@ namespace block_diag_ilu {
     // template<typename T> constexpr auto buffer_factory = make_unique<T>;
     // Work around in C++11:
     template<typename T> inline constexpr buffer_t<T> buffer_factory(std::size_t n) {
-        return make_unique<T[]>(n); 
+        return make_unique<T[]>(n);
     }
     template<typename T> inline constexpr T* buffer_get_raw_ptr(buffer_t<T>& buf) {
         return buf.get();
@@ -68,13 +69,12 @@ namespace block_diag_ilu {
     template<typename T> using buffer_t = std::vector<T>;
     template<typename T> using buffer_ptr_t = T*;
     template<typename T> inline constexpr buffer_t<T> buffer_factory(std::size_t n) {
-        return buffer_t<T>(n); 
-    }    
+        return buffer_t<T>(n);
+    }
     template<typename T> inline constexpr T* buffer_get_raw_ptr(buffer_t<T>& buf) {
         return &buf[0];
     }
 #endif
-    
 
 #if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
     inline int dgetrf_square(const int dim, double * const __restrict__ a,
@@ -140,7 +140,41 @@ namespace block_diag_ilu {
                         out[bi*blkw + ci] += this->sup(di, bi, ci)*vec[(bi+di+1)*blkw+ci];
                         out[(bi+di+1)*blkw + ci] += this->sub(di, bi, ci)*vec[bi*blkw+ci];
                     }
-    }
+        }
+        Real_t rms_diag(int diag_idx) {
+            // returns the root means square of `diag_idx`:th diagonal
+            // (diag_idx < 0 denotes sub diagonals, diag_idx == 0 deontes main diagonal,
+            // and diag_idx > 0 denotes super diagonals)
+            Real_t sum = 0;
+            std::size_t nelem;
+            if (diag_idx == 0){
+                nelem = (this->nblocks)*(this->blockw);
+                for (std::size_t bi = 0; bi < (this->nblocks); ++bi)
+                    for (int ci = 0; ci < (this->blockw); ++ci){
+                        const Real_t elem = this->block(bi, ci, ci);
+                        sum += elem*elem;
+                    }
+            } else if (diag_idx < 0) {
+                if ((unsigned)(-diag_idx) >= this->nblocks)
+                    return 0;
+                nelem = (this->nblocks + diag_idx)*(this->blockw);
+                for (std::size_t bi = 0; bi < (this->nblocks)+diag_idx ; ++bi)
+                    for (int ci = 0; ci < (this->blockw); ++ci){
+                        const Real_t elem = this->sub(-diag_idx - 1, bi, ci);
+                        sum += elem*elem;
+                    }
+            } else {
+                if ((unsigned)diag_idx >= this->nblocks)
+                    return 0;
+                nelem = (this->nblocks - diag_idx)*(this->blockw);
+                for (std::size_t bi = 0; bi < (this->nblocks)-diag_idx ; ++bi)
+                    for (int ci = 0; ci < (this->blockw); ++ci){
+                        const Real_t elem = this->sup(diag_idx - 1, bi, ci);
+                        sum += elem*elem;
+                    }
+            }
+            return std::sqrt(sum/nelem);
+        }
 
     private:
         inline std::size_t diag_idx(const int diagi, const std::size_t blocki,
@@ -221,7 +255,34 @@ namespace block_diag_ilu {
                         this->sup(di, bi, ci) = -gamma*other.sup(di, bi, ci);
                     }
         }
-        
+        inline void zero_out_blocks() noexcept {
+            for (std::size_t i=0; i<(this->block_data_len); ++i){
+                this->block_data[i] = 0.0;
+            }
+        }
+        inline void zero_out_diags() noexcept {
+            for (std::size_t i=0; i<(this->diag_data_len); ++i){
+                this->sub_data[i] = 0.0;
+            }
+            for (std::size_t i=0; i<(this->diag_data_len); ++i){
+                this->sup_data[i] = 0.0;
+            }
+        }
+        double average_diag_weight(uint di){
+            double off_diag_factor = 0;
+            for (uint bi = 0; bi < this->nblocks; ++bi){
+                for (int li = 0; li < this->blockw; ++li){
+                    const double diag_val = this->block(bi, li, li);
+                    if (bi < this->nblocks - di - 1){
+                        off_diag_factor += std::abs(diag_val / this->sup(di, bi, li));
+                    }
+                    if (bi > di){
+                        off_diag_factor += std::abs(diag_val / this->sub(di, bi-1-di, li));
+                    }
+                }
+            }
+            return off_diag_factor / ((this->blockw) * (this->nblocks - 1 - di) * 2);
+        }
     };
 
     class LU {
@@ -240,9 +301,9 @@ namespace block_diag_ilu {
             ipiv(buffer_factory<int>(view.dim))
         {
             int info;
-            dgbtrf_(&this->dim, &this->dim, &this->nouter, &this->nouter, 
+            dgbtrf_(&this->dim, &this->dim, &this->nouter, &this->nouter,
                     buffer_get_raw_ptr(this->data),
-                    &this->ld, 
+                    &this->ld,
                     buffer_get_raw_ptr(this->ipiv), &info);
             if (info){
                 throw std::runtime_error("DGBTRF failed.");
@@ -250,11 +311,11 @@ namespace block_diag_ilu {
         }
         inline void solve(const double * const b, double * const x){
             const char trans = 'N'; // no transpose
-            memcpy(x, b, sizeof(double)*this->dim);
+            std::memcpy(x, b, sizeof(double)*this->dim);
             int info, nrhs=1;
             dgbtrs_(&trans, &this->dim, &this->nouter, &this->nouter, &nrhs,
-                    buffer_get_raw_ptr(this->data), &this->ld, 
-            buffer_get_raw_ptr(this->ipiv), x, &this->dim, &info);
+                    buffer_get_raw_ptr(this->data), &this->ld,
+                    buffer_get_raw_ptr(this->ipiv), x, &this->dim, &info);
             if (info)
                 throw std::runtime_error("DGBTRS failed.");
         };
@@ -262,24 +323,44 @@ namespace block_diag_ilu {
 
     template <typename Real_t = double>
     class ColMajBlockDiagMat {
-    public:
         buffer_t<Real_t> block_data, sub_data, sup_data;
+    public:
         ColMajBlockDiagView<Real_t> view;
+        const bool contiguous;
+        buffer_ptr_t<Real_t> get_block_data_raw_ptr() {
+            return buffer_get_raw_ptr(this->block_data);
+        }
+        buffer_ptr_t<Real_t> get_sub_data_raw_ptr() {
+            return buffer_get_raw_ptr(this->sub_data);
+        }
+        buffer_ptr_t<Real_t> get_sup_data_raw_ptr() {
+            return buffer_get_raw_ptr(this->sup_data);
+        }
         ColMajBlockDiagMat(const std::size_t nblocks_,
                            const int blockw_,
                            const int ndiag_,
                            const int ld_blocks_=0,
                            const std::size_t block_stride_=0,
-                           const int ld_diag_=0) :
-            view(nullptr, nullptr, nullptr,
-                 nblocks_, blockw_, ndiag_, 
-                 ld_blocks_, block_stride_, ld_diag_) {
-            this->block_data = buffer_factory<Real_t>(view.block_data_len);
-            this->sub_data = buffer_factory<Real_t>(view.diag_data_len);
-            this->sup_data = buffer_factory<Real_t>(view.diag_data_len);
-            this->view.set_data_pointers(buffer_get_raw_ptr(this->block_data),
-                                         buffer_get_raw_ptr(this->sub_data),
-                                         buffer_get_raw_ptr(this->sup_data));
+                           const int ld_diag_=0,
+                           const bool contiguous=true) :
+            view(nullptr, nullptr, nullptr, nblocks_, blockw_,
+                 ndiag_, ld_blocks_, block_stride_, ld_diag_),
+            contiguous(contiguous) {
+            if (contiguous){
+                this->block_data = buffer_factory<Real_t>(view.block_data_len +
+                                                          2*view.diag_data_len);
+                auto raw_ptr = this->get_block_data_raw_ptr();
+                this->view.set_data_pointers(raw_ptr,
+                                             raw_ptr + view.block_data_len,
+                                             raw_ptr + view.block_data_len + view.diag_data_len);
+            } else {
+                this->block_data = buffer_factory<Real_t>(view.block_data_len);
+                this->sub_data = buffer_factory<Real_t>(view.diag_data_len);
+                this->sup_data = buffer_factory<Real_t>(view.diag_data_len);
+                this->view.set_data_pointers(buffer_get_raw_ptr(this->block_data),
+                                             buffer_get_raw_ptr(this->sub_data),
+                                             buffer_get_raw_ptr(this->sup_data));
+            }
         }
     };
 
@@ -323,7 +404,7 @@ namespace block_diag_ilu {
         double sub_get(const int diagi, const std::size_t blocki,
                        const int coli) { return this->view.sub(diagi, blocki, coli); }
         double sup_get(const int diagi, const std::size_t blocki,
-                       const int coli) { return this->view.sup(diagi, blocki, coli); }       
+                       const int coli) { return this->view.sup(diagi, blocki, coli); }
         int piv_get(const int idx) { return this->ipiv[idx]; }
         int rowbycol_get(const int idx) { return this->rowbycol[idx]; }
         int colbyrow_get(const int idx) { return this->colbyrow[idx]; }
@@ -331,7 +412,7 @@ namespace block_diag_ilu {
 
         // use ld_blocks and ld_diag in view to avoid false sharing
         // in parallelized execution
-        ILU_inplace(ColMajBlockDiagView<double> view) : 
+        ILU_inplace(ColMajBlockDiagView<double> view) :
             view(view),
             ipiv(buffer_factory<int>(view.blockw*view.nblocks)),
             rowbycol(buffer_factory<int>(view.blockw*view.nblocks)),

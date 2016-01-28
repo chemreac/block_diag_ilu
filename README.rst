@@ -1,10 +1,10 @@
-==============
 block_diag_ilu
 ==============
 
-.. image:: http://hera.physchem.kth.se:8080/github.com/chemreac/block_diag_ilu/status.svg?branch=master
-   :target: http://hera.physchem.kth.se:8080/github.com/chemreac/block_diag_ilu
+.. image:: http://hera.physchem.kth.se:9090/api/badges/bjodah/block_diag_ilu/status.svg
+   :target: http://hera.physchem.kth.se:9090/bjodah/block_diag_ilu
    :alt: Build status
+
 
 ``block_diag_ilu`` is an open source C++ header implementeation of an
 incomplete LU decomposition routine suitable for diagonally dominant block diagonal

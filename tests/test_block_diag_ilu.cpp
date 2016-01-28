@@ -191,7 +191,7 @@ TEST_CASE( "addressing", "[ColMajBlockDiagView]" ) {
 
 TEST_CASE( "addressing multi diag", "[ColMajBlockDiagView]" ) {
     auto X = -99.0;
-    std::array<double, 2*3*3+2> blocks {{ 
+    std::array<double, 2*3*3+2> blocks {{
             1, 2, X,
                 3, 4, X,
                 X,
@@ -244,6 +244,32 @@ TEST_CASE( "addressing multi diag", "[ColMajBlockDiagView]" ) {
         REQUIRE( v.sup(1, 0, 1) == 82 );
     }
 }
+
+TEST_CASE( "average_diag_weight", "[ColMajBlockDiagView]" ) {
+    auto X = -97.0;
+    std::array<double, 2*3*3 + 2> blocks {{
+                100, 5, X,
+                5, 100, X,
+                X,
+                100, 11, X,
+                11, 100, X,
+                X,
+                100, 13, X,
+                13, 100, X,
+            }};
+    std::array<double, 3*(2+1)> sub {{
+            10, 10, X, 10, 10, X,
+                1, 1, X}};
+    std::array<double, 3*(2+1)> sup {{
+            10, 10, X, 10, 10, X,
+                1, 1, X}};
+    block_diag_ilu::ColMajBlockDiagView<double> v {blocks.data(), sub.data(), sup.data(), 3, 2, 2, 3, 7, 3};
+    auto res_0 = v.average_diag_weight(0);
+    auto res_1 = v.average_diag_weight(1);
+    REQUIRE( std::abs(res_0 - 10) < 1e-15 );
+    REQUIRE( std::abs(res_1 - 100) < 1e-15 );
+}
+
 
 TEST_CASE( "set_to_1_minus_gamma_times_other", "[ColMajBlockDiagView]" ) {
     std::array<double, 2*2*3> blocks {{1, 2, 3, 4,
@@ -586,4 +612,36 @@ TEST_CASE( "solve", "[LU]" ) {
         REQUIRE( std::abs((x[idx] - xref[idx])/1e-14) < 1 );
     }
 
+}
+
+TEST_CASE( "rms_diag", "[ColMajBlockDiagMat]" ) {
+    auto cmbdm = get_test_case_colmajblockdiagmat();
+    auto rms_subd = cmbdm.view.rms_diag(-1);
+    auto rms_main = cmbdm.view.rms_diag(0);
+    auto rms_supd = cmbdm.view.rms_diag(1);
+    auto ref_subd = std::sqrt((1+4+9+16)/4.0);
+    auto ref_main = std::sqrt((25+64+64+16+36+49)/6.0);
+    auto ref_supd = std::sqrt((4+9+16+25)/4.0);
+    REQUIRE( std::abs((rms_subd - ref_subd)/1e-14) < 1 );
+    REQUIRE( std::abs((rms_main - ref_main)/1e-14) < 1 );
+    REQUIRE( std::abs((rms_supd - ref_supd)/1e-14) < 1 );
+}
+
+TEST_CASE( "zero_out_blocks", "[ColMajBlockDiagMat]" ) {
+    auto cmbdm = get_test_case_colmajblockdiagmat();
+    cmbdm.view.zero_out_blocks();
+    for (int bi=0; bi<3; ++bi)
+        for (int ci=0; ci<2; ++ci)
+            for (int ri=0; ri<2; ++ri)
+                REQUIRE( cmbdm.view.block(bi, ri, ci) == 0.0 );
+}
+
+TEST_CASE( "zero_out_diags", "[ColMajBlockDiagMat]" ) {
+    auto cmbdm = get_test_case_colmajblockdiagmat();
+    cmbdm.view.zero_out_diags();
+    for (int bi=0; bi<2; ++bi)
+        for (int ci=0; ci<2; ++ci){
+            REQUIRE( cmbdm.view.sub(0, bi, ci) == 0.0 );
+            REQUIRE( cmbdm.view.sup(0, bi, ci) == 0.0 );
+        }
 }
