@@ -6,11 +6,13 @@ block_diag_ilu
    :alt: Build status
 
 
-``block_diag_ilu`` is an open source C++ header implementeation of an
+``block_diag_ilu`` is an open source `C++ single header-file implementeation
+<https://github.com/chemreac/block_diag_ilu/tree/master/include>`_ of an
 incomplete LU decomposition routine suitable for diagonally dominant block diagonal
-matrices with sub- and super diagonals of small magnitude. It is useful for 
+matrices with sub- and super diagonals of small magnitude. It is useful for
 preconditioning linear systems when e.g. integrating discretized PDEs of mixed
-chemical kinetics / diffusion problems where the diffusion process may be accurately considered a mild perturbation.
+chemical kinetics / diffusion problems where the diffusion process may be accurately
+considered a mild perturbation.
 
 License
 =======
