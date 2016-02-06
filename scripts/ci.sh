@@ -3,6 +3,7 @@ cd tests
 make
 make clean; make DEFINES=-DWITH_BLOCK_DIAG_ILU_DGETRF EXTRA_FLAGS="-fopenmp"
 make clean; make DEFINES=-DNDEBUG
+make clean; make CXX=clang++-3.7
 cd ../python_prototype
 PYTHONPATH=$(pwd) python -m pytest
 export NP_INC=$(python -c "import numpy; print(numpy.get_include())")
@@ -22,3 +23,4 @@ rm _block_diag_ilu.so
 WITH_BLOCK_DIAG_ILU_OPENMP=1 WITH_BLOCK_DIAG_ILU_DGETRF=1 python setup.py build_ext -i
 PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
 PYTHONPATH=$(pwd) python demo.py
+! grep "DO-NOT-MERGE!" -R . --exclude ci.sh
