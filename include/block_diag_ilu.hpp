@@ -183,16 +183,16 @@ namespace block_diag_ilu {
             }
             return std::sqrt(sum/nelem);
         }
-        double average_diag_weight(uint di){
-            double off_diag_factor = 0;
+        Real_t average_diag_weight(uint di){  // di >= 0
+            Real_t off_diag_factor = 0;
             for (uint bi = 0; bi < this->nblocks; ++bi){
                 for (uint li = 0; li < this->blockw; ++li){
-                    const double diag_val = this->block(bi, li, li);
+                    const Real_t diag_val = this->block(bi, li, li);
                     if (bi < this->nblocks - di - 1){
-                        off_diag_factor += std::abs(diag_val / this->sup(di, bi, li));
+                        off_diag_factor += std::abs(diag_val/this->sub(di, bi, li));
                     }
                     if (bi > di){
-                        off_diag_factor += std::abs(diag_val / this->sub(di, bi-1-di, li));
+                        off_diag_factor += std::abs(diag_val/this->sup(di, bi - di - 1, li));
                     }
                 }
             }

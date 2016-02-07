@@ -2,3 +2,14 @@ build:
   image: bjodah/bjodahimg:v1.1
   commands:
     - ./scripts/ci.sh
+
+deploy:
+
+  rsync:
+    host: hera.physchem.kth.se
+    user: block_diag_ilu
+    port: 22
+    source: deploy/
+    target: ~
+    recursive: true
+    delete: false
