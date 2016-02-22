@@ -89,32 +89,100 @@ namespace block_diag_ilu {
                             const int *nsup, const int *nrhs, double *ab,
                             const int *ldab, const int *ipiv, double *b, const int *ldb, int *info);
 
+    constexpr uint nouter_(uint blockw, uint ndiag) { return (ndiag == 0) ? blockw-1 : blockw*ndiag; }
+    constexpr uint banded_ld_(uint nouter) { return 1 + 3*nouter; } // padded for use with LAPACK's dgbtrf
+
+
+    template <class T, typename Real_t = double>
+    struct ColMajViewBase {
+        const uint blockw, ndiag;
+        const std::size_t nblocks, nouter, dim;
+        ColMajViewBase(uint blockw, uint ndiag, std::size_t nblocks)
+            : blockw(blockw), ndiag(ndiag), nblocks(nblocks),
+              nouter(nouter_(blockw, ndiag)), dim(blockw*nblocks) {}
+
+        inline Real_t get_global(const std::size_t rowi,
+                                 const std::size_t coli) const noexcept{
+            auto that = static_cast<const T*>(this);  // CRTP
+            const std::size_t bri = rowi / that->blockw;
+            const std::size_t bci = coli / that->blockw;
+            const uint lri = rowi - bri*that->blockw;
+            const uint lci = coli - bci*that->blockw;
+            if (bri == bci)
+                return that->block(bri, lri, lci);
+            if (lri != lci)
+                return 0.0;
+            if (bri > bci){ // sub diagonal
+                if ((bri - bci) > (unsigned)ndiag)
+                    return 0.0;
+                else
+                    return that->sub(bri-bci-1, bci, lci);
+            } else { // super diagonal
+                if ((bci - bri) > (unsigned)ndiag)
+                    return 0.0;
+                else
+                    return that->sup(bci-bri-1, bri, lri);
+            }
+        }
+        inline uint get_banded_ld() const noexcept {
+            return banded_ld_(static_cast<const T*>(this)->nouter);  // CRTP
+        }
+    };
+
     template <typename Real_t = double>
-    class ColMajBlockDiagView {
+    class ColMajBandedView : public ColMajViewBase<ColMajBandedView<Real_t>, Real_t> {
+        // For use with LAPACK's banded matrix layout
+    public:
+        Real_t *data;
+        const uint ld;
+
+        ColMajBandedView(Real_t *data, const std::size_t nblocks, const uint blockw, const uint ndiag)
+            : ColMajViewBase<ColMajBandedView<Real_t>, Real_t>(blockw, ndiag, nblocks),
+              data(data), ld(banded_ld_(nouter_(blockw, ndiag))) {}
+        inline Real_t& block(const std::size_t blocki, const uint rowi,
+                             const uint coli) const noexcept {
+            const uint imaj = blocki*(this->blockw) + coli;
+            const uint imin = 2*(this->nouter) + rowi - coli;
+            return this->data[imaj*ld + imin];
+        }
+        inline Real_t& sub(const uint diagi, const std::size_t blocki,
+                           const uint coli) const noexcept {
+            const uint imaj = blocki*(this->blockw) + coli;
+            const uint imin = 2*(this->nouter) + (diagi + 1)*(this->blockw);
+            return this->data[imaj*ld + imin];
+        }
+        inline Real_t& sup(const uint diagi, const std::size_t blocki,
+                           const uint coli) const noexcept {
+            const uint imaj = (blocki + diagi + 1)*(this->blockw) + coli;
+            const uint imin = 2*(this->nouter) - (diagi+1)*(this->blockw);
+            return this->data[imaj*ld + imin];
+        }
+    };
+
+    template <typename Real_t = double>
+    class ColMajBlockDiagView : public ColMajViewBase<ColMajBlockDiagView<Real_t>, Real_t> {
     public:
         Real_t *block_data, *sub_data, *sup_data;
         // int will suffice, decomposition scales as N**3 even iterative methods (N**2) would need months at 1 TFLOPS
-        const std::size_t nblocks;
-        const uint blockw, ndiag, ld_blocks;
+        const uint ld_blocks;
         const std::size_t block_stride;
         const uint ld_diag;
-        const std::size_t block_data_len, diag_data_len, nouter, dim;
+        const std::size_t block_data_len, diag_data_len;
         // ld_block for cache alignment and avoiding false sharing
         // block_stride for avoiding false sharing
-        ColMajBlockDiagView(Real_t * const block_data_, Real_t * const sub_data_,
-                            Real_t * const sup_data_, const std::size_t nblocks_,
-                            const uint blockw_, const uint ndiag_,
+        ColMajBlockDiagView(Real_t * const block_data, Real_t * const sub_data,
+                            Real_t * const sup_data, const std::size_t nblocks,
+                            const uint blockw, const uint ndiag,
                             const uint ld_blocks_=0, const std::size_t block_stride_=0,
                             const uint ld_diag_=0) :
-            block_data(block_data_), sub_data(sub_data_), sup_data(sup_data_),
-            nblocks(nblocks_), blockw(blockw_), ndiag(ndiag_),
-            ld_blocks((ld_blocks_ == 0) ? blockw_ : ld_blocks_),
+            ColMajViewBase<ColMajBlockDiagView<Real_t>, Real_t>(blockw, ndiag, nblocks),
+            block_data(block_data), sub_data(sub_data), sup_data(sup_data),
+            ld_blocks((ld_blocks_ == 0) ? blockw : ld_blocks_),
             block_stride((block_stride_ == 0) ? ld_blocks*blockw : block_stride_),
             ld_diag((ld_diag_ == 0) ? ld_blocks : ld_diag_),
             block_data_len(nblocks*block_stride),
-            diag_data_len(ld_diag*(nblocks*ndiag - (ndiag*ndiag + ndiag)/2)),
-            nouter((ndiag == 0) ? blockw-1 : blockw*ndiag),
-            dim(blockw*nblocks) {}
+            diag_data_len(ld_diag*(nblocks*ndiag - (ndiag*ndiag + ndiag)/2))
+            {}
         inline void set_data_pointers(buffer_ptr_t<Real_t> block_data_,
                                       buffer_ptr_t<Real_t> sub_data_,
                                       buffer_ptr_t<Real_t> sup_data_) noexcept {
@@ -218,31 +286,6 @@ namespace block_diag_ilu {
                            const uint coli) const noexcept {
             return this->sup_data[diag_idx(diagi, blocki, coli)];
         }
-        inline Real_t get_global(const std::size_t rowi,
-                                 const std::size_t coli) const noexcept{
-            const std::size_t bri = rowi / this->blockw;
-            const std::size_t bci = coli / this->blockw;
-            const uint lri = rowi - bri*this->blockw;
-            const uint lci = coli - bci*this->blockw;
-            if (bri == bci)
-                return this->block(bri, lri, lci);
-            if (lri != lci)
-                return 0.0;
-            if (bri > bci){ // sub diagonal
-                if ((bri - bci) > (unsigned)ndiag)
-                    return 0.0;
-                else
-                    return this->sub(bri-bci-1, bci, lci);
-            } else { // super diagonal
-                if ((bci - bri) > (unsigned)ndiag)
-                    return 0.0;
-                else
-                    return this->sup(bci-bri-1, bri, lri);
-            }
-        }
-        inline uint get_banded_ld() const noexcept {
-            return 1 + 3*this->nouter; // padded for use with LAPACK's dgbtrf
-        }
         inline buffer_t<Real_t> to_banded() const {
             const auto ld_result = this->get_banded_ld();
             auto result = buffer_factory<Real_t>(ld_result*this->dim);
@@ -314,6 +357,19 @@ namespace block_diag_ilu {
             data(view.to_banded()),
             ipiv(buffer_factory<int>(view.dim))
         {
+            factorize();
+        }
+        LU(const ColMajBandedView<double>& view) :
+            dim(view.dim),
+            nouter(view.nouter),
+            ld(view.ld),
+            data(buffer_factory<double>(view.ld*view.dim)),
+            ipiv(buffer_factory<int>(view.dim))
+        {
+            std::memcpy(&data[0], view.data, sizeof(double)*view.ld*view.dim);
+            factorize();
+        }
+        void factorize(){
             int info;
             dgbtrf_(&this->dim, &this->dim, &this->nouter, &this->nouter,
                     buffer_get_raw_ptr(this->data),

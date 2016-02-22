@@ -14,14 +14,29 @@ preconditioning linear systems when e.g. integrating discretized PDEs of mixed
 chemical kinetics / diffusion problems where the diffusion process may be accurately
 considered a mild perturbation.
 
+Conditional compilation
+-----------------------
+The following macros affect the compilation:
+
++--------------------------+-----------------------------------------------+---------------+
+|Variable name             |Action                                         |Default        |
++==========================+===============================================+===============+
+|NDEBUG                    |use std::unique_ptr instead of std::vector as  |undefined      |
+|                          |underlying data structure.                     |               |
++--------------------------+-----------------------------------------------+---------------+
+|WITH_BLOCK_DIAG_ILU_DGETRF|Use unblocked version of dgetrf (parallel      |undefined      |
+|                          |execution via OpenMP)                          |               |
++--------------------------+-----------------------------------------------+---------------+
+
+
 License
-=======
+-------
 The source code is Open Source and is released under the very permissive
 "simplified (2-clause) BSD license". See ``LICENSE.txt`` for further details.
 Contributors are welcome to suggest improvements at https://github.com/chemreac/block_diag_ilu
 
 Author
-======
+------
 Björn Dahlgren, contact:
  - gmail adress: bjodah
  - kth.se adress: bda
