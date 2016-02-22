@@ -734,7 +734,6 @@ block_diag_ilu::ColMajBandedView<double> get_cmbv2(std::array<double, 13*6>& arr
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    const uint nouter = 4;
     return block_diag_ilu::ColMajBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
@@ -782,4 +781,27 @@ TEST_CASE( "sup2", "[ColMajBandedView]" ) {
 
     REQUIRE( cmbv.sup(1, 0, 0) == 4 );
     REQUIRE( cmbv.sup(1, 0, 1) == 8 );
+}
+
+TEST_CASE( "block_sub_sup", "[ColMajDenseView]" ) {
+    // 1 2 3 0 4 0
+    // 5 6 0 7 0 8
+    // 9 0 1 2 3 0
+    // 0 4 5 6 0 7
+    // 8 0 9 0 1 2
+    // 0 3 0 4 5 6
+    std::array<double, 36> arr {{1, 5, 9, 0, 8, 0, 2, 6, 0, 4, 0, 3, 3, 0, 1, 5, 9, 0, 0, 7, 2, 6, 0, 4, 4, 0, 3, 0, 1, 5,
+                0, 8, 0, 7, 2, 6}};
+    const int blockw = 2;
+    const int nblocks = 3;
+    const int ndiag = 2;
+    auto cmdv = block_diag_ilu::ColMajDenseView<double>((double*)arr.data(), nblocks, blockw, ndiag);
+    REQUIRE( cmdv.ld == 6 );
+    for (auto i=0; i<2; ++i){
+        REQUIRE( cmdv.block(i, 0, 0) == 1 );
+        REQUIRE( cmdv.block(i, 0, 1) == 2 );
+        REQUIRE( cmdv.block(i, 1, 0) == 5 );
+        REQUIRE( cmdv.block(i, 1, 1) == 6 );
+    }
+
 }

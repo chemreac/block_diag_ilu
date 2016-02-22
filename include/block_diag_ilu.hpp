@@ -129,6 +129,37 @@ namespace block_diag_ilu {
         }
     };
 
+
+    template <typename Real_t = double>
+    class ColMajDenseView : public ColMajViewBase<ColMajDenseView<Real_t>, Real_t> {
+        // For use with LAPACK's dense matrix layout
+    public:
+        Real_t *data;
+        const uint ld;
+
+        ColMajDenseView(Real_t *data, const std::size_t nblocks, const uint blockw, const uint ndiag, const int ld_=0)
+            : ColMajViewBase<ColMajDenseView<Real_t>, Real_t>(blockw, ndiag, nblocks),
+              data(data), ld((ld_ == 0) ? blockw*nblocks : ld_) {}
+        inline Real_t& block(const std::size_t blocki, const uint rowi,
+                             const uint coli) const noexcept {
+            const uint imaj = (this->blockw)*blocki + coli;
+            const uint imin = (this->blockw)*blocki + rowi;
+            return this->data[imaj*ld + imin];
+        }
+        inline Real_t& sub(const uint diagi, const std::size_t blocki,
+                           const uint coli) const noexcept {
+            const uint imaj = (this->blockw)*blocki + coli;
+            const uint imin = (this->blockw)*(blocki + diagi + 1) + coli;
+            return this->data[imaj*ld + imin];
+        }
+        inline Real_t& sup(const uint diagi, const std::size_t blocki,
+                           const uint coli) const noexcept {
+            const uint imaj = (this->blockw)*(blocki + diagi + 1) + coli;
+            const uint imin = (this->blockw) + coli;
+            return this->data[imaj*ld + imin];
+        }
+    };
+
     template <typename Real_t = double>
     class ColMajBandedView : public ColMajViewBase<ColMajBandedView<Real_t>, Real_t> {
         // For use with LAPACK's banded matrix layout
