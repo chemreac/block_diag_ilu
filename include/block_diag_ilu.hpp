@@ -136,9 +136,9 @@ namespace block_diag_ilu {
         Real_t *data;
         const uint ld;
 
-        ColMajBandedView(Real_t *data, const std::size_t nblocks, const uint blockw, const uint ndiag)
+        ColMajBandedView(Real_t *data, const std::size_t nblocks, const uint blockw, const uint ndiag, const int ld_=0)
             : ColMajViewBase<ColMajBandedView<Real_t>, Real_t>(blockw, ndiag, nblocks),
-              data(data), ld(banded_ld_(nouter_(blockw, ndiag))) {}
+              data(data), ld((ld_ == 0) ? banded_ld_(nouter_(blockw, ndiag)) : ld_) {}
         inline Real_t& block(const std::size_t blocki, const uint rowi,
                              const uint coli) const noexcept {
             const uint imaj = blocki*(this->blockw) + coli;

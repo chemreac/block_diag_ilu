@@ -24,8 +24,10 @@ WITH_BLOCK_DIAG_ILU_OPENMP=1 WITH_BLOCK_DIAG_ILU_DGETRF=1 python setup.py build_
 PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
 PYTHONPATH=$(pwd) python demo.py
 
-./run_demo.sh
-mkdir -p ../deploy/public_html/branches/"${CI_BRANCH}"/
-cp run_demo.out demo_out.png  ../deploy/public_html/branches/"${CI_BRANCH}"/
+if [[ "$CI_BRANCH" == "master" ]]; then
+    ./run_demo.sh
+    mkdir -p ../deploy/public_html/branches/"${CI_BRANCH}"/
+    cp run_demo.out demo_out.png  ../deploy/public_html/branches/"${CI_BRANCH}"/
+fi
 
 ! grep "DO-NOT-MERGE!" -R . --exclude ci.sh

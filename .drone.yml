@@ -13,3 +13,5 @@ deploy:
     target: ~
     recursive: true
     delete: false
+    when:
+      branch: master

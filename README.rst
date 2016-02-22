@@ -21,11 +21,12 @@ The following macros affect the compilation:
 +--------------------------+-----------------------------------------------+---------------+
 |Variable name             |Action                                         |Default        |
 +==========================+===============================================+===============+
-|NDEBUG                    |use std::unique_ptr instead of std::vector as  |undefined      |
-|                          |underlying data structure.                     |               |
+|NDEBUG                    |use ``std::unique_ptr`` instead of             |undefined      |
+|                          |``std::vector`` as underlying data structure.  |               |
 +--------------------------+-----------------------------------------------+---------------+
-|WITH_BLOCK_DIAG_ILU_DGETRF|Use unblocked version of dgetrf (parallel      |undefined      |
-|                          |execution via OpenMP)                          |               |
+|WITH_BLOCK_DIAG_ILU_DGETRF|Use unblocked (parallell) internal             |undefined      |
+|                          |implementation of LACKPACKS's ``dgetrf`` (uses |               |
+|                          |OpenMP)                                        |               |
 +--------------------------+-----------------------------------------------+---------------+
 
 
