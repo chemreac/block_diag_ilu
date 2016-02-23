@@ -530,6 +530,62 @@ TEST_CASE( "dot_vec_ColMajBlockDiagView", "[ColMajBlockDiagView]" ) {
         REQUIRE( std::abs((b[i] - bref[i])/1e-15) < 1 );
 }
 
+TEST_CASE( "copy_to_matrix", "[ColMajBlockDiagView]" ) {
+    const int blockw = 2;
+    const int nblocks = 3;
+    const int ndiag = 1;
+    // 5 3 2 # # #
+    // 5 8 # 3 # #
+    // 1 # 8 4 4 #
+    // # 2 4 4 # 5
+    // # # 3 # 6 9
+    // # # # 4 2 7
+    std::array<double, blockw*blockw*nblocks> block_d {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
+    std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4}};
+    std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5}};
+    block_diag_ilu::ColMajBlockDiagView<double> cmbdv {&block_d[0], &sub_d[0], &sup_d[0], nblocks, blockw, ndiag};
+    auto mat = cmbdv.copy_to_matrix();
+    for (int bi=0; bi<3; ++bi){
+        for (int ri=0; ri<2; ++ri){
+            for (int ci=0; ci<2; ++ci){
+                const double diff = mat.view.block(bi, ri, ci) - cmbdv.block(bi, ri, ci);
+                REQUIRE( std::abs(diff) < 1e-15 );
+            }
+        }
+        if (bi < 2){
+            for (int li=0; li<2; ++li){
+                const double subdiff = mat.view.sub(0, bi, li) - cmbdv.sub(0, bi, li);
+                const double supdiff = mat.view.sup(0, bi, li) - cmbdv.sup(0, bi, li);
+                REQUIRE( std::abs(subdiff) < 1e-15 );
+                REQUIRE( std::abs(supdiff) < 1e-15 );
+            }
+        }
+    }
+    mat.view.zero_out_blocks();
+    mat.view.zero_out_diags();
+    mat.view.scale_diag_add(cmbdv, 2, 1);
+    for (int bi=0; bi<3; ++bi){
+        for (int ri=0; ri<2; ++ri){
+            for (int ci=0; ci<2; ++ci){
+                double diff = mat.view.block(bi, ri, ci) - 2*cmbdv.block(bi, ri, ci);
+                if (ri == ci){
+                    diff -= 1;
+                }
+                REQUIRE( std::abs(diff) < 1e-15 );
+            }
+        }
+        if (bi < 2){
+            for (int li=0; li<2; ++li){
+                const double subdiff = mat.view.sub(0, bi, li) - 2*cmbdv.sub(0, bi, li);
+                const double supdiff = mat.view.sup(0, bi, li) - 2*cmbdv.sup(0, bi, li);
+                REQUIRE( std::abs(subdiff) < 1e-15 );
+                REQUIRE( std::abs(supdiff) < 1e-15 );
+            }
+        }
+    }
+}
+
+
 
 TEST_CASE( "LU(view)", "[LU]" ) {
 

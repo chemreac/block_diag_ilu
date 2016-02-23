@@ -8,11 +8,26 @@ block_diag_ilu
 
 ``block_diag_ilu`` is an open source `C++ single header-file implementeation
 <https://github.com/chemreac/block_diag_ilu/tree/master/include>`_ of an
-incomplete LU decomposition routine suitable for diagonally dominant block diagonal
+incomplete LU decomposition routine suitable for diagonally dominant (square) block diagonal
 matrices with sub- and super diagonals of small magnitude. It is useful for
-preconditioning linear systems when e.g. integrating discretized PDEs of mixed
+preconditioning linear systems. The usecase in mind is for integrating discretized PDEs of mixed
 chemical kinetics / diffusion problems where the diffusion process may be accurately
 considered a mild perturbation.
+
+A picture is woth a thousant words, so if your matrix looks anything like this:
+
+.. image:: scripts/matrix.png
+   :scale: 50%
+   :alt: Diagnoally dominant block diagonal matrix with sub- and super-diagnoals
+   
+its LU decomposition then looks like this:
+
+.. image:: scripts/lu.png
+   :scale: 50%
+   :alt: LU decomposition of same matrix
+
+then ``block_diag_ilu`` should be able to save quite a bit of time when
+solving linear systems approximately, *e.g.* for preconditioning.
 
 Conditional compilation
 -----------------------
@@ -25,7 +40,7 @@ The following macros affect the compilation:
 |                          |``std::vector`` as underlying data structure.  |               |
 +--------------------------+-----------------------------------------------+---------------+
 |WITH_BLOCK_DIAG_ILU_DGETRF|Use unblocked (parallell) internal             |undefined      |
-|                          |implementation of LACKPACKS's ``dgetrf`` (uses |               |
+|                          |implementation of LAPACK's ``dgetrf`` (uses    |               |
 |                          |OpenMP)                                        |               |
 +--------------------------+-----------------------------------------------+---------------+
 
@@ -34,6 +49,7 @@ License
 -------
 The source code is Open Source and is released under the very permissive
 "simplified (2-clause) BSD license". See ``LICENSE.txt`` for further details.
+
 Contributors are welcome to suggest improvements at https://github.com/chemreac/block_diag_ilu
 
 Author
