@@ -103,30 +103,48 @@ namespace block_diag_ilu {
 
         inline Real_t get_global(const std::size_t rowi,
                                  const std::size_t coli) const noexcept{
-            auto that = static_cast<const T*>(this);  // CRTP
-            const std::size_t bri = rowi / that->blockw;
-            const std::size_t bci = coli / that->blockw;
-            const uint lri = rowi - bri*that->blockw;
-            const uint lci = coli - bci*that->blockw;
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            const std::size_t bri = rowi / self.blockw;
+            const std::size_t bci = coli / self.blockw;
+            const uint lri = rowi - bri*self.blockw;
+            const uint lci = coli - bci*self.blockw;
             if (bri == bci)
-                return that->block(bri, lri, lci);
+                return self.block(bri, lri, lci);
             if (lri != lci)
                 return 0.0;
             if (bri > bci){ // sub diagonal
                 if ((bri - bci) > (unsigned)ndiag)
                     return 0.0;
                 else
-                    return that->sub(bri-bci-1, bci, lci);
+                    return self.sub(bri-bci-1, bci, lci);
             } else { // super diagonal
                 if ((bci - bri) > (unsigned)ndiag)
                     return 0.0;
                 else
-                    return that->sup(bci-bri-1, bri, lri);
+                    return self.sup(bci-bri-1, bri, lri);
             }
         }
         inline uint get_banded_ld() const noexcept {
             return banded_ld_(static_cast<const T*>(this)->nouter);  // CRTP
         }
+#if defined(BLOCK_DIAG_ILU_PY)
+        // Cython work around: https://groups.google.com/forum/#!topic/cython-users/j58Sp3QMrD4
+        void set_block(const std::size_t blocki, const uint rowi,
+                       const uint coli, Real_t value) const noexcept {
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            self.block(blocki, rowi, coli) = value;
+        }
+        void set_sub(const uint diagi, const std::size_t blocki,
+                     const uint coli, Real_t value) const noexcept {
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            self.sub(diagi, blocki, coli) = value;
+        }
+        void set_sup(const uint diagi, const std::size_t blocki,
+                     const uint coli, Real_t value) const noexcept {
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            self.sup(diagi, blocki, coli) = value;
+        }
+#endif
     };
 
 
@@ -578,7 +596,7 @@ namespace block_diag_ilu {
                     }
                     for (unsigned int di = 1; di < (unsigned)ndiag + 1; ++di){
                         if (bri >= di) {
-                            int ci = this->colbyrow[bri*blockw + li];
+                            const uint ci = this->colbyrow[bri*blockw + li];
                             s += (this->view.sub(di-1, bri-di, ci) * y[(bri-di)*blockw + ci]);
                         }
                     }
@@ -593,7 +611,7 @@ namespace block_diag_ilu {
                     }
                     for (int di = 1; di <= ndiag; ++di) {
                         if ((bri-1) < nblocks - di){
-                            int ci = this->colbyrow[(bri-1)*blockw + li-1];
+                            const uint ci = this->colbyrow[(bri-1)*blockw + li-1];
                             s += this->view.sup(di-1, bri-1, ci)*x[(bri-1+di)*blockw + ci];
                         }
                     }
@@ -603,6 +621,7 @@ namespace block_diag_ilu {
             }
         }
     };
+
     class ILU{
         ColMajBlockDiagMat<double> m_mat;
         ILU_inplace m_ilu_inplace;

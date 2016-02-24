@@ -1,12 +1,12 @@
+**.pyc
+**.so
+**.cache
 tests/catch.hpp
 tests/test_block_diag_ilu
-python_prototype/_block_diag_ilu.so
 python_prototype/_block_diag_ilu.cpp
-python_prototype/*.pyc
+block_diag_ilu/_block_diag_ilu.cpp
 python_prototype/build
-python_prototype/.cache
-python_prototype/*/__pycache__
 python_prototype/*.png
 python_prototype/*.out
-.cache/
 build/
+cython_debug/

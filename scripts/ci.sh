@@ -4,7 +4,15 @@ make
 make clean; make DEFINES=-DWITH_BLOCK_DIAG_ILU_DGETRF EXTRA_FLAGS="-fopenmp"
 make clean; make DEFINES=-DNDEBUG
 make clean; make CXX=clang++-3.7
-cd ../python_prototype
+
+cd ..
+python2.7 setup.py sdist
+for PYTHON in python2.7 python3.4; do
+    (cd dist/; $PYTHON -m pip install $1-$($PYTHON ../setup.py --version).tar.gz)
+    (cd /; $PYTHON -m pytest --pyargs $1)
+done
+
+cd python_prototype
 PYTHONPATH=$(pwd) python -m pytest
 export NP_INC=$(python -c "import numpy; print(numpy.get_include())")
 echo $NP_INC
