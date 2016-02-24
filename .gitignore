@@ -10,3 +10,5 @@ python_prototype/*.png
 python_prototype/*.out
 build/
 cython_debug/
+dist/
+block_diag_ilu.egg-info/

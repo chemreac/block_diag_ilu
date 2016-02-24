@@ -1,0 +1,31 @@
+package:
+  name: block_diag_ilu
+  version: 0.1.0.git
+
+source:
+  path: ../
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - python
+    - numpy
+    - cython
+  run:
+    - python
+    - numpy
+
+
+test:
+  requires:
+    - python
+    - pytest
+
+  imports:
+    - block_diag_ilu
+
+about:
+  home: https://github.com/chemreac/block_diag_ilu
+  license: Simplified BSD license

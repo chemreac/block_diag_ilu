@@ -34,7 +34,7 @@ Conditional compilation
 The following macros affect the compilation:
 
 +--------------------------+-----------------------------------------------+---------------+
-|Variable name             |Action                                         |Default        |
+|Macro name                |Action (when defined)                          |Default        |
 +==========================+===============================================+===============+
 |NDEBUG                    |use ``std::unique_ptr`` instead of             |undefined      |
 |                          |``std::vector`` as underlying data structure.  |               |
