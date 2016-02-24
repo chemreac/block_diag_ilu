@@ -5,11 +5,34 @@ import os
 import numpy as np
 import scipy.linalg
 
-from .. import Compressed_from_dense, ILU, get_include
+from .. import Compressed_from_dense, ILU, get_include, Compressed_from_data
 
 def test_get_include():
     assert get_include().endswith('include')
     assert os.listdir(get_include())[0] == 'block_diag_ilu.hpp'
+
+def test_Compressed_from_data():
+    A = np.array([
+        [  9,  3, .1,  0,.01,  0],
+        [ -4, 18,  0, .5,  0,.02],
+        [ .2,  0,  7, -2,  1,  0],
+        [  0,-.1,  3,  5,  0,-.1],
+        [.03,  0, .1,  0, -9,  2],
+        [  0,.04,  0,.05, -3,  7]
+    ])
+    b = np.array([-7, 3, 5, -4, 6, 1.5])
+    lu, piv = scipy.linalg.lu_factor(A)
+    x = scipy.linalg.lu_solve((lu, piv), b)
+
+    data = np.array([
+        9, -4, 3, 18, 7, 3, -2, 5, -9, -3, 2, 7,
+        .2, -.1, .1, .05, .03, .04,
+        .1, .5, 1, -.1, .01, .02
+    ], dtype=np.float64)
+    cmprs = Compressed_from_data(data, 3, 2, 2)
+    ilu = ILU(cmprs)
+    ix = ilu.solve(b)
+    assert np.allclose(x, ix, rtol=0.05, atol=1e-6)
 
 
 def test_Compressed_from_dense():

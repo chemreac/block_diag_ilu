@@ -26,8 +26,7 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
 
 cdef class Compressed:
     cdef ColMajBlockDiagView[double] *view
-    #cdef cnp.ndarray[cnp.float64_t, ndim=1] data
-    cdef double[::1] data
+    cdef public double[::1] data
 
     def __cinit__(self, unsigned nblocks, unsigned blockw, unsigned ndiag):
         # Make sure data isn't free:ed while still possibly
@@ -84,6 +83,17 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
             for ci in range(blockw):
                 cmprs.set_sub(di, bi, ci, A[(bi+di+1)*blockw + ci, bi*blockw + ci])
                 cmprs.set_sup(di, bi, ci, A[bi*blockw + ci, (bi+di+1)*blockw + ci])
+    return cmprs
+
+
+def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, blockw, ndiag):
+    cdef Compressed cmprs = Compressed(nblocks, blockw, ndiag)
+    if (data.size != cmprs.data.size):
+        raise ValueError('Incompatible sizes')
+
+    # cmprs.data[:] = data[:]  # <-- does not work
+    for i in range(data.size):
+        cmprs.data[i] = data[i]
     return cmprs
 
 

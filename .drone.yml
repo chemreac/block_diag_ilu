@@ -1,7 +1,7 @@
 build:
   image: bjodah/bjodahimg:v1.1
   commands:
-    - ./scripts/ci.sh
+    - ./scripts/ci.sh block_diag_ilu
 
 deploy:
 

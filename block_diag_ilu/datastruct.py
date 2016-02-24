@@ -14,7 +14,7 @@ def alloc_compressed(nblocks, blockw, ndiag):
     return np.zeros(n_block_elem + n_diag_elem)
 
 
-def get_compressed(A, n, N, ndiag, cmaj=True):
+def get_compressed(A, N, n, ndiag, cmaj=True):
     """
     Turns a dense matrix (n*N)*(n*N) into a packed storage of
     block diagonal submatrices (column major order) followed by
@@ -24,10 +24,10 @@ def get_compressed(A, n, N, ndiag, cmaj=True):
     Parameters
     ----------
     A: 2-dimensional square matrix
-    n: int
-        sub-block dimension
     N: int
         number of super-blocks
+    n: int
+        sub-block dimension
     ndiag: int
         number of sub diagonals (also implies number of
         super diagonals)
