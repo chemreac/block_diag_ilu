@@ -5,12 +5,15 @@ import os
 import numpy as np
 import scipy.linalg
 
-from .. import Compressed_from_dense, ILU, LU, get_include, Compressed_from_data
+from .. import (
+    Compressed_from_dense, ILU, LU, get_include, Compressed_from_data
+)
 
 
 def test_get_include():
     assert get_include().endswith('include')
     assert os.listdir(get_include())[0] == 'block_diag_ilu.hpp'
+
 
 def _get_A():
     return np.array([
@@ -22,11 +25,13 @@ def _get_A():
         [0, .04, 0, .05, -3, 7]
     ])
 
+
 def _get_A_data():
     return np.array([
         9, -4, 3, 18, 7, 3, -2, 5, -9, -3, 2, 7,
         .2, -.1, .1, .05, .03, .04,
         .1, .5, 1, -.1, .01, .02])
+
 
 def test_Compressed_from_data():
     b = np.array([-7, 3, 5, -4, 6, 1.5])
