@@ -23,6 +23,10 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         ILU(ColMajBlockDiagView[double])
         void solve(double *, double *)
 
+    cdef cppclass LU:
+        LU(ColMajBlockDiagView[double])
+        void solve(double *, double *)
+
 
 cdef class Compressed:
     cdef ColMajBlockDiagView[double] *view
@@ -102,6 +106,21 @@ cdef class PyILU:
 
     def __cinit__(self, Compressed cmprs):
         self.thisptr = new ILU(deref(cmprs.view))
+
+    def __dealloc__(self):
+        del self.thisptr
+
+    def solve(self, cnp.ndarray[cnp.float64_t, ndim=1] b):
+        cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.zeros_like(b)
+        self.thisptr.solve(&b[0], &x[0])
+        return x
+
+
+cdef class PyLU:
+    cdef LU *thisptr
+
+    def __cinit__(self, Compressed cmprs):
+        self.thisptr = new LU(deref(cmprs.view))
 
     def __dealloc__(self):
         del self.thisptr
