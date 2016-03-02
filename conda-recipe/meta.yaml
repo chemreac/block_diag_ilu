@@ -13,9 +13,11 @@ requirements:
       - python
       - numpy
       - cython
+      - lapack
     run:
       - python
       - numpy
+      - lapack
 
 
 test:
