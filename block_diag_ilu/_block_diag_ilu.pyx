@@ -15,17 +15,17 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         T& block(size_t, unsigned, unsigned)
         T& sub(unsigned, size_t, unsigned)
         T& sup(unsigned, size_t, unsigned)
-        void set_block(size_t, unsigned, unsigned, double)
-        void set_sub(unsigned, size_t, unsigned, double)
-        void set_sup(unsigned, size_t, unsigned, double)
+        void set_block(size_t, unsigned, unsigned, T)
+        void set_sub(unsigned, size_t, unsigned, T)
+        void set_sup(unsigned, size_t, unsigned, T)
 
-    cdef cppclass ILU:
-        ILU(ColMajBlockDiagView[double])
-        void solve(double *, double *)
+    cdef cppclass ILU[T]:
+        ILU(ColMajBlockDiagView[T])
+        void solve(T *, T *)
 
-    cdef cppclass LU:
-        LU(ColMajBlockDiagView[double])
-        void solve(double *, double *)
+    cdef cppclass LU[T]:
+        LU(ColMajBlockDiagView[T])
+        void solve(T *, T *)
 
 
 cdef class Compressed:
@@ -102,10 +102,10 @@ def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, block
 
 
 cdef class PyILU:
-    cdef ILU *thisptr
+    cdef ILU[double] *thisptr
 
     def __cinit__(self, Compressed cmprs):
-        self.thisptr = new ILU(deref(cmprs.view))
+        self.thisptr = new ILU[double](deref(cmprs.view))
 
     def __dealloc__(self):
         del self.thisptr
@@ -117,10 +117,10 @@ cdef class PyILU:
 
 
 cdef class PyLU:
-    cdef LU *thisptr
+    cdef LU[double] *thisptr
 
     def __cinit__(self, Compressed cmprs):
-        self.thisptr = new LU(deref(cmprs.view))
+        self.thisptr = new LU[double](deref(cmprs.view))
 
     def __dealloc__(self):
         del self.thisptr
