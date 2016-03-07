@@ -11,6 +11,8 @@ pkg_name = 'block_diag_ilu'
 
 BLOCK_DIAG_ILU_RELEASE_VERSION = os.environ.get(
     'BLOCK_DIAG_ILU_RELEASE_VERSION', '')  # v*
+WITH_BLOCK_DIAG_ILU_DGETRF = os.environ.get('WITH_BLOCK_DIAG_ILU_DGETRF', '0') == '1'
+WITH_BLOCK_DIAG_ILU_OPENMP = os.environ.get('WITH_BLOCK_DIAG_ILU_OPENMP', '0') == '1'
 
 # Cythonize .pyx file if it exists (not in source distribution)
 ext_modules = []
@@ -31,10 +33,15 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
     if USE_CYTHON:
         from Cython.Build import cythonize
         ext_modules = cythonize(ext_modules, include_path=['./include'], gdb_debug=True)
+    macros = [('BLOCK_DIAG_ILU_PY', None)]
+    if WITH_BLOCK_DIAG_ILU_DGETRF:
+        macros.append(('WITH_BLOCK_DIAG_ILU_DGETRF', None))
+    if WITH_BLOCK_DIAG_ILU_OPENMP:
+        macros.append(('WITH_BLOCK_DIAG_ILU_OPENMP', None))
     ext_modules[0].language = 'c++'
     ext_modules[0].extra_compile_args = ['-std=c++11']
     ext_modules[0].include_dirs = [_path_under_setup('include')]
-    ext_modules[0].define_macros += [('BLOCK_DIAG_ILU_PY', None)]
+    ext_modules[0].define_macros += macros
     ext_modules[0].libraries += [os.environ.get('LLAPACK', 'lapack')]
 
 # http://conda.pydata.org/docs/build.html#environment-variables-set-during-the-build-process

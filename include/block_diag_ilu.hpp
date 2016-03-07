@@ -87,11 +87,11 @@ namespace block_diag_ilu {
 #endif
 
     extern "C" void dgbtrf_(const int *nrows, const int* ncols, const int* nsub,
-                            const int *nsup, double *ab, const int *ldab, int *ipiv, int *info);
+                            const int *nsup, double *ab, int *ldab, int *ipiv, int *info);
 
     extern "C" void dgbtrs_(const char *trans, const int *dim, const int* nsub,
                             const int *nsup, const int *nrhs, double *ab,
-                            const int *ldab, const int *ipiv, double *b, const int *ldb, int *info);
+                            const int *ldab, int *ipiv, double *b, const int *ldb, int *info);
 
     constexpr uint nouter_(uint blockw, uint ndiag) { return (ndiag == 0) ? blockw-1 : blockw*ndiag; }
     constexpr uint banded_ld_(uint nouter, int offset=-1) {
