@@ -15,8 +15,6 @@ cdef class Compressed:
     cdef public double[::1] data
 
     def __cinit__(self, unsigned nblocks, unsigned blockw, unsigned ndiag):
-        # Make sure data isn't free:ed while still possibly
-        # referenced by this View object:
         cdef:
             unsigned n_skip_elem_sub = blockw*blockw*nblocks
             unsigned n_skip_elem_sup = n_skip_elem_sub + diag_data_len(nblocks, blockw, ndiag)
@@ -83,6 +81,14 @@ def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, block
     return cmprs
 
 
+cdef _check_solve_flag(int flag, int N):
+    if flag != 0:
+        if flag < N:
+            raise ValueError("NaN in b")
+        else:
+            raise ZeroDivisionError("Rank deficient matrix")
+
+
 cdef class PyILU:
     cdef ILU[double] *thisptr
 
@@ -94,7 +100,7 @@ cdef class PyILU:
 
     def solve(self, cnp.ndarray[cnp.float64_t, ndim=1] b):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.zeros_like(b)
-        self.thisptr.solve(&b[0], &x[0])
+        _check_solve_flag(self.thisptr.solve(&b[0], &x[0]), b.size)
         return x
 
 
@@ -109,5 +115,5 @@ cdef class PyLU:
 
     def solve(self, cnp.ndarray[cnp.float64_t, ndim=1] b):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.zeros_like(b)
-        self.thisptr.solve(&b[0], &x[0])
+        _check_solve_flag(self.thisptr.solve(&b[0], &x[0]), b.size)
         return x

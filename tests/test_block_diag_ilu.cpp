@@ -83,7 +83,8 @@ TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU_inplace]" ) {
         std::array<double, 6> xref {{-31.47775, 53.42125, 31.0625,
                     -43.36875, -19.25625, 19.5875}};
         std::array<double, 6> x;
-        ilu.solve(b.data(), x.data());
+        int flag = ilu.solve(b.data(), x.data());
+        REQUIRE( flag == 0 );
         REQUIRE( std::abs((x[0] - xref[0])/1e-14) < 1.0 );
         REQUIRE( std::abs((x[1] - xref[1])/1e-14) < 1.0 );
         REQUIRE( std::abs((x[2] - xref[2])/1e-14) < 1.0 );
@@ -137,7 +138,8 @@ TEST_CASE( "_get_test_m4 in test_fakelu.py", "[ILU]" ) {
                 3.15378902934640371e+00
                     }};
         std::array<double, 6> x;
-        ilu.solve(b.data(), x.data());
+        int flag = ilu.solve(b.data(), x.data());
+        REQUIRE( flag == 0 );
         REQUIRE( std::abs(x[0] - xref[0]) < 1e-15 );
         REQUIRE( std::abs(x[1] - xref[1]) < 1e-15 );
         REQUIRE( std::abs(x[2] - xref[2]) < 1e-15 );
@@ -661,8 +663,8 @@ TEST_CASE( "solve", "[LU]" ) {
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
     auto lu = block_diag_ilu::LU<double>(cmbdv);
-    lu.solve(&b[0], &x[0]);
-
+    int flag = lu.solve(&b[0], &x[0]);
+    REQUIRE( flag == 0 );
     for (int idx=0; idx<blockw*nblocks; ++idx){
         REQUIRE( std::abs((x[idx] - xref[idx])/1e-14) < 1 );
     }
@@ -1006,7 +1008,8 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
         std::array<long double, 6> xref {{-31.47775L, 53.42125L, 31.0625L,
                     -43.36875L, -19.25625L, 19.5875L}};
         std::array<long double, 6> x;
-        ilu.solve(b.data(), x.data());
+        int flag = ilu.solve(b.data(), x.data());
+        REQUIRE( flag == 0 );
         REQUIRE( block_diag_ilu::absval(x[0] - xref[0]) < 5e-18L );
         REQUIRE( block_diag_ilu::absval(x[1] - xref[1]) < 5e-18L );
         REQUIRE( block_diag_ilu::absval(x[2] - xref[2]) < 5e-18L );

@@ -10,8 +10,8 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
 
     cdef cppclass ILU[T]:
         ILU(ColMajBlockDiagView[T])
-        void solve(T *, T *)
+        int solve(T *, T *)
 
     cdef cppclass LU[T]:
         LU(ColMajBlockDiagView[T])
-        void solve(T *, T *)
+        int solve(T *, T *)
