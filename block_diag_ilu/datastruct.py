@@ -41,7 +41,7 @@ def get_compressed(A, N, n, ndiag, cmaj=True):
     """
     if A.shape != (n*N, n*N):
         raise ValueError("Shape of A != (n*N, n*N)")
-    B = np.zeros((n*n*N + 2*diag_data_len(N, n, ndiag)))
+    B = np.zeros(n*n*N + 2*diag_data_len(N, n, ndiag))
     idx = 0
     for bi in range(N):
         for imaj in range(n):

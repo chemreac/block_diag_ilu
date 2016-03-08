@@ -11,7 +11,7 @@ from block_diag_ilu cimport ColMajBlockDiagView, ILU_inplace
 from cython.operator cimport dereference as deref
 
 cdef class PyILU:
-    cdef ILU_inplace *thisptr
+    cdef ILU_inplace[double] *thisptr
     cdef ColMajBlockDiagView[double] *viewptr
     cdef double[::1, :] A
     cdef double[::1] sup, sub
@@ -37,7 +37,7 @@ cdef class PyILU:
         self.sub = sub
         self.viewptr = new ColMajBlockDiagView[double](&self.A[0,0], &self.sub[0], &self.sup[0],
                                                        self.nblocks, blockw, ndiag)
-        self.thisptr = new ILU_inplace(deref(self.viewptr))
+        self.thisptr = new ILU_inplace[double](deref(self.viewptr))
 
     def __dealloc__(self):
         del self.thisptr

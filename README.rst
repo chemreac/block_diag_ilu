@@ -16,13 +16,13 @@ considered a mild perturbation.
 
 A picture is woth a thousant words, so if your matrix looks anything like this:
 
-.. image:: scripts/matrix.png
+.. image:: https://raw.githubusercontent.com/bjodah/block_diag_ilu/master/scripts/matrix.png
    :scale: 50%
    :alt: Diagnoally dominant block diagonal matrix with sub- and super-diagnoals
    
 its LU decomposition then looks like this:
 
-.. image:: scripts/lu.png
+.. image:: https://raw.githubusercontent.com/bjodah/block_diag_ilu/master/scripts/lu.png
    :scale: 50%
    :alt: LU decomposition of same matrix
 

@@ -4,28 +4,10 @@
 
 cimport numpy as cnp
 from cython.operator cimport dereference as deref
+from block_diag_ilu cimport ColMajBlockDiagView, ILU, LU
 
 import numpy as np
 from .datastruct import alloc_compressed, diag_data_len
-
-
-cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
-    cdef cppclass ColMajBlockDiagView[T]:
-        ColMajBlockDiagView(T*, T*, T*, size_t, unsigned, unsigned)
-        T& block(size_t, unsigned, unsigned)
-        T& sub(unsigned, size_t, unsigned)
-        T& sup(unsigned, size_t, unsigned)
-        void set_block(size_t, unsigned, unsigned, double)
-        void set_sub(unsigned, size_t, unsigned, double)
-        void set_sup(unsigned, size_t, unsigned, double)
-
-    cdef cppclass ILU:
-        ILU(ColMajBlockDiagView[double])
-        void solve(double *, double *)
-
-    cdef cppclass LU:
-        LU(ColMajBlockDiagView[double])
-        void solve(double *, double *)
 
 
 cdef class Compressed:
@@ -33,8 +15,6 @@ cdef class Compressed:
     cdef public double[::1] data
 
     def __cinit__(self, unsigned nblocks, unsigned blockw, unsigned ndiag):
-        # Make sure data isn't free:ed while still possibly
-        # referenced by this View object:
         cdef:
             unsigned n_skip_elem_sub = blockw*blockw*nblocks
             unsigned n_skip_elem_sup = n_skip_elem_sub + diag_data_len(nblocks, blockw, ndiag)
@@ -101,31 +81,39 @@ def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, block
     return cmprs
 
 
+cdef _check_solve_flag(int flag, int N):
+    if flag != 0:
+        if flag < N:
+            raise ValueError("NaN in b")
+        else:
+            raise ZeroDivisionError("Rank deficient matrix")
+
+
 cdef class PyILU:
-    cdef ILU *thisptr
+    cdef ILU[double] *thisptr
 
     def __cinit__(self, Compressed cmprs):
-        self.thisptr = new ILU(deref(cmprs.view))
+        self.thisptr = new ILU[double](deref(cmprs.view))
 
     def __dealloc__(self):
         del self.thisptr
 
     def solve(self, cnp.ndarray[cnp.float64_t, ndim=1] b):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.zeros_like(b)
-        self.thisptr.solve(&b[0], &x[0])
+        _check_solve_flag(self.thisptr.solve(&b[0], &x[0]), b.size)
         return x
 
 
 cdef class PyLU:
-    cdef LU *thisptr
+    cdef LU[double] *thisptr
 
     def __cinit__(self, Compressed cmprs):
-        self.thisptr = new LU(deref(cmprs.view))
+        self.thisptr = new LU[double](deref(cmprs.view))
 
     def __dealloc__(self):
         del self.thisptr
 
     def solve(self, cnp.ndarray[cnp.float64_t, ndim=1] b):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.zeros_like(b)
-        self.thisptr.solve(&b[0], &x[0])
+        _check_solve_flag(self.thisptr.solve(&b[0], &x[0]), b.size)
         return x

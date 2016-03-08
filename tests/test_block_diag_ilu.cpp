@@ -64,7 +64,7 @@ TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU_inplace]" ) {
     // this is _get_test_m2 in test_fakelu.py
     auto cmbdm = get_test_case_colmajblockdiagmat();
     auto cmbdv = cmbdm.view;
-    block_diag_ilu::ILU_inplace ilu(cmbdv);
+    block_diag_ilu::ILU_inplace<double> ilu(cmbdv);
 
     SECTION( "check lower correctly computed" ) {
         REQUIRE( ilu.sub_get(0, 0, 0) == 1/5. );
@@ -83,7 +83,8 @@ TEST_CASE( "_get_test_m2 in test_fakelu.py", "[ILU_inplace]" ) {
         std::array<double, 6> xref {{-31.47775, 53.42125, 31.0625,
                     -43.36875, -19.25625, 19.5875}};
         std::array<double, 6> x;
-        ilu.solve(b.data(), x.data());
+        int flag = ilu.solve(b.data(), x.data());
+        REQUIRE( flag == 0 );
         REQUIRE( std::abs((x[0] - xref[0])/1e-14) < 1.0 );
         REQUIRE( std::abs((x[1] - xref[1])/1e-14) < 1.0 );
         REQUIRE( std::abs((x[2] - xref[2])/1e-14) < 1.0 );
@@ -105,7 +106,7 @@ TEST_CASE( "_get_test_m4 in test_fakelu.py", "[ILU]" ) {
     const std::array<double, 6> sup {{.2, .3, -.1, .2, .02, .03}};
     block_diag_ilu::ColMajBlockDiagView<double> cmbdv {
         (double*)block.data(), (double*)sub.data(), (double*)sup.data(), nblocks, blockw, ndiag};
-    block_diag_ilu::ILU_inplace ilu(cmbdv);
+    block_diag_ilu::ILU_inplace<double> ilu(cmbdv);
 
     REQUIRE( ilu.nblocks() == nblocks );
     REQUIRE( ilu.blockw() == blockw );
@@ -137,7 +138,8 @@ TEST_CASE( "_get_test_m4 in test_fakelu.py", "[ILU]" ) {
                 3.15378902934640371e+00
                     }};
         std::array<double, 6> x;
-        ilu.solve(b.data(), x.data());
+        int flag = ilu.solve(b.data(), x.data());
+        REQUIRE( flag == 0 );
         REQUIRE( std::abs(x[0] - xref[0]) < 1e-15 );
         REQUIRE( std::abs(x[1] - xref[1]) < 1e-15 );
         REQUIRE( std::abs(x[2] - xref[2]) < 1e-15 );
@@ -600,7 +602,7 @@ TEST_CASE( "LU(view)", "[LU]" ) {
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
-    auto lu = block_diag_ilu::LU(cmbdv);
+    auto lu = block_diag_ilu::LU<double>(cmbdv);
 // >>> scipy.linalg.lu_factor(numpy.array([[5, 3, 2, 0, 0, 0],
 //                                         [5, 8, 0, 3, 0, 0],
 //                                         [1, 0, 8, 4, 4, 0],
@@ -660,9 +662,9 @@ TEST_CASE( "solve", "[LU]" ) {
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
-    auto lu = block_diag_ilu::LU(cmbdv);
-    lu.solve(&b[0], &x[0]);
-
+    auto lu = block_diag_ilu::LU<double>(cmbdv);
+    int flag = lu.solve(&b[0], &x[0]);
+    REQUIRE( flag == 0 );
     for (int idx=0; idx<blockw*nblocks; ++idx){
         REQUIRE( std::abs((x[idx] - xref[idx])/1e-14) < 1 );
     }
@@ -955,3 +957,65 @@ TEST_CASE( "block_sub_sup__offset", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.sub(1, 0, 0) == 8 );
     REQUIRE( cmbv.sub(1, 0, 1) == 3 );
 }
+
+#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
+    constexpr int nblocks = 3;
+    constexpr int blockw = 2;
+    constexpr int ndiag = 1;
+    block_diag_ilu::ColMajBlockDiagMat<long double> cmbdm {nblocks, blockw, ndiag};
+    // 5 3 2 # # #
+    // 5 8 # 3 # #
+    // 1 # 8 4 4 #
+    // # 2 4 4 # 5
+    // # # 3 # 6 9
+    // # # # 4 2 7
+    std::array<long double, blockw*blockw*nblocks> blocks {{
+            5, 5, 3, 8,
+            8, 4, 4, 4,
+            6, 2, 9, 7}};
+    std::array<long double,blockw*(nblocks-1)> sub {{
+            1, 2, 3, 4 }};
+    std::array<long double,blockw*(nblocks-1)> sup {{
+            2, 3, 4, 5 }};
+    for (size_t bi=0; bi<3; ++bi)
+        for (size_t ci=0; ci<2; ++ci){
+            if (bi<2){
+                cmbdm.view.sub(0, bi, ci) = sub[bi*2+ci];
+                cmbdm.view.sup(0, bi, ci) = sup[bi*2+ci];
+            }
+            for (size_t ri=0; ri<2; ++ri)
+                cmbdm.view.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
+        }
+
+    auto cmbdv = cmbdm.view;
+    block_diag_ilu::ILU_inplace<long double> ilu(cmbdv);
+
+    SECTION( "check lower correctly computed" ) {
+        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 0, 0) - 1/5.L) < 1e-18L );
+        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 0, 1) - 2/5.L) < 1e-18L );
+        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 1, 0) - 3/8.L) < 1e-18L );
+        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 1, 1) - 4/2.L) < 1e-18L );
+    }
+    SECTION( "check upper still perserved" ) {
+        REQUIRE( ilu.sup_get(0, 0, 0) == 2 );
+        REQUIRE( ilu.sup_get(0, 0, 1) == 3 );
+        REQUIRE( ilu.sup_get(0, 1, 0) == 4 );
+        REQUIRE( ilu.sup_get(0, 1, 1) == 5 );
+    }
+    SECTION( "solve performs adequately" ) {
+        std::array<long double, 6> b {{65L, 202L, 11L, 65L, 60L, 121L}};
+        std::array<long double, 6> xref {{-31.47775L, 53.42125L, 31.0625L,
+                    -43.36875L, -19.25625L, 19.5875L}};
+        std::array<long double, 6> x;
+        int flag = ilu.solve(b.data(), x.data());
+        REQUIRE( flag == 0 );
+        REQUIRE( block_diag_ilu::absval(x[0] - xref[0]) < 5e-18L );
+        REQUIRE( block_diag_ilu::absval(x[1] - xref[1]) < 5e-18L );
+        REQUIRE( block_diag_ilu::absval(x[2] - xref[2]) < 5e-18L );
+        REQUIRE( block_diag_ilu::absval(x[3] - xref[3]) < 5e-18L );
+        REQUIRE( block_diag_ilu::absval(x[4] - xref[4]) < 5e-18L );
+        REQUIRE( block_diag_ilu::absval(x[5] - xref[5]) < 5e-18L );
+    }
+}
+#endif
