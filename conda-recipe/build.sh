@@ -1,3 +1,3 @@
 #!/bin/bash
-${PYTHON} setup.py build
+LLAPACK=openblas ${PYTHON} setup.py build
 ${PYTHON} setup.py install
