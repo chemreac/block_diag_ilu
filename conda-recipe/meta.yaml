@@ -1,33 +1,36 @@
 package:
     name: block_diag_ilu
-    version: 0.1.0.git
+    version: 0.3.0.git
 
 source:
     path: ../
 
+# You may want to exchange openblas with e.g. lapack
 build:
-    number: 0
+  string: np{{np}}py{{py}}_o0
+  features:
+    - openblas
 
 requirements:
-    build:
-      - python
-      - numpy
-      - cython
-      - lapack
-    run:
-      - python
-      - numpy
-      - lapack
+  build:
+    - python
+    - numpy
+    - cython
+    - openblas
+  run:
+    - python
+    - numpy
+    - openblas
 
 
 test:
-    requires:
-      - python
-      - pytest
+  requires:
+    - python
+    - pytest
 
-    imports:
-      - block_diag_ilu
+  imports:
+    - block_diag_ilu
 
 about:
-    home: https://github.com/chemreac/block_diag_ilu
-    license: Simplified BSD license
+  home: https://github.com/chemreac/block_diag_ilu
+  license: Simplified BSD license
