@@ -23,6 +23,7 @@ def _path_under_setup(*args):
 
 if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         '--help-commands', 'egg_info', 'clean', '--version'):
+    import numpy as np
     USE_CYTHON = os.path.exists(_path_under_setup('block_diag_ilu',
                                                   '_block_diag_ilu.pyx'))
     ext = '.pyx' if USE_CYTHON else '.cpp'
@@ -40,7 +41,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         macros.append(('WITH_BLOCK_DIAG_ILU_OPENMP', None))
     ext_modules[0].language = 'c++'
     ext_modules[0].extra_compile_args = ['-std=c++11']
-    ext_modules[0].include_dirs = [_path_under_setup('include')]
+    ext_modules[0].include_dirs = [_path_under_setup('include'), np.get_include()]
     ext_modules[0].define_macros += macros
     ext_modules[0].libraries += [os.environ.get('LLAPACK', 'lapack')]
 
