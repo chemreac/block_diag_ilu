@@ -1,11 +1,14 @@
 #!/bin/bash -ex
 # Usage:
 #
-#    $ ./scripts/build_conda_recipe.sh v1.2.3
+#    $ ./scripts/build_conda_recipe.sh v1.2.3 27 110 --no-test
 #
 if [[ $1 != v* ]]; then
     echo "Argument does not start with 'v'"
     exit 1
+fi
+if [[ $# -lt 3 ]]; then
+    >&2 echo "Need at least three arguemnts: vX.Y.Z CONDA_PY CONDA_NPY"
 fi
 ./scripts/check_clean_repo_on_master.sh
 
@@ -15,5 +18,4 @@ cleanup() {
 }
 trap cleanup INT TERM EXIT
 
-CONDA_PY=34 conda build conda-recipe
-CONDA_PY=27 conda build conda-recipe
+CONDA_PY=$2 CONDA_NPY=$3 conda build ${@:4} conda-recipe

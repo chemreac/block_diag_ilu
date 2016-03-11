@@ -15,7 +15,8 @@ PKG=$(find . -maxdepth 2 -name __init__.py -print0 | xargs -0 -n1 dirname | xarg
 PKG_UPPER=$(echo $PKG | tr '[:lower:]' '[:upper:]')
 ./scripts/run_tests.sh
 env ${PKG_UPPER}_RELEASE_VERSION=$1 python setup.py sdist
-PATH=$2:$PATH ./scripts/build_conda_recipe.sh $1
+PATH=$2:$PATH ./scripts/build_conda_recipe.sh $1 27 110 ${@:3}
+PATH=$2:$PATH ./scripts/build_conda_recipe.sh $1 27 110 ${@:3}
 
 # All went well, add a tag and push it.
 git tag -a $1 -m $1
@@ -35,5 +36,5 @@ sed -i -E -e "s/version:(.+)/version: $VERSION/" -e "s/path:(.+)/fn: $PKG-$VERSI
 SERVER=hera
 scp -r dist/conda-recipe-${1#v}/ $PKG@$SERVER:~/public_html/conda-recipes/
 scp dist/${PKG}-$VERSION.tar.gz $PKG@$SERVER:~/public_html/releases/
-ssh $PKG@$SERVER "source /etc/profile; CONDA_PY=27 conda-build ~/public_html/conda-recipes/conda-recipe-${1#v}/"
-ssh $PKG@$SERVER "source /etc/profile; CONDA_PY=34 conda-build ~/public_html/conda-recipes/conda-recipe-${1#v}/"
+ssh $PKG@$SERVER "source /etc/profile; CONDA_PY=27 CONDA_NPY=110 conda-build ~/public_html/conda-recipes/conda-recipe-${1#v}/"
+ssh $PKG@$SERVER "source /etc/profile; CONDA_PY=34 CONDA_NPY=110 conda-build ~/public_html/conda-recipes/conda-recipe-${1#v}/"
