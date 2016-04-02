@@ -114,7 +114,7 @@ if __name__ == '__main__':
         if TAGGED_RELEASE:
             shutil.move(release_py_path, release_py_path+'__temp__')
             io.open(release_py_path, 'wt', encoding='utf-8').write(
-                "__version__ = '{}'\n".format(__version__))
+                u"__version__ = '{}'\n".format(__version__))
         setup(**setup_kwargs)
     finally:
         if TAGGED_RELEASE:
