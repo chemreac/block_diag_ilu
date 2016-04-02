@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import io
 import os
 import shutil
 import sys
@@ -9,8 +10,7 @@ from setuptools import setup, Extension
 
 pkg_name = 'block_diag_ilu'
 
-BLOCK_DIAG_ILU_RELEASE_VERSION = os.environ.get(
-    'BLOCK_DIAG_ILU_RELEASE_VERSION', '')  # v*
+RELEASE_VERSION = os.environ.get('BLOCK_DIAG_ILU_RELEASE_VERSION', '')  # v*
 WITH_BLOCK_DIAG_ILU_DGETRF = os.environ.get('WITH_BLOCK_DIAG_ILU_DGETRF', '0') == '1'
 WITH_BLOCK_DIAG_ILU_OPENMP = os.environ.get('WITH_BLOCK_DIAG_ILU_OPENMP', '0') == '1'
 
@@ -48,23 +48,24 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
 # http://conda.pydata.org/docs/build.html#environment-variables-set-during-the-build-process
 if os.environ.get('CONDA_BUILD', '0') == '1':
     try:
-        BLOCK_DIAG_ILU_RELEASE_VERSION = 'v' + open(
-            '__conda_version__.txt', 'rt').readline().rstrip()
+        RELEASE_VERSION = 'v' + io.open(
+            '__conda_version__.txt', 'rt', encoding='utf-8'
+        ).readline().rstrip()
     except IOError:
         pass
 
 release_py_path = _path_under_setup(pkg_name, '_release.py')
 
-if len(BLOCK_DIAG_ILU_RELEASE_VERSION) > 0:
-    if BLOCK_DIAG_ILU_RELEASE_VERSION[0] == 'v':
+if len(RELEASE_VERSION) > 0:
+    if RELEASE_VERSION[0] == 'v':
         TAGGED_RELEASE = True
-        __version__ = BLOCK_DIAG_ILU_RELEASE_VERSION[1:]
+        __version__ = RELEASE_VERSION[1:]
     else:
         raise ValueError("Ill formated version")
 else:
     TAGGED_RELEASE = False
     # read __version__ attribute from _release.py:
-    exec(open(release_py_path).read())
+    exec(io.open(release_py_path, encoding='utf-8').read())
 
 
 classifiers = [
@@ -79,10 +80,12 @@ tests = [
     'block_diag_ilu.tests',
 ]
 
-with open(_path_under_setup(pkg_name, '__init__.py'), 'rt') as f:
+with io.open(_path_under_setup(pkg_name, '__init__.py'),
+             'rt', encoding='utf-8') as f:
     short_description = f.read().split('"""')[1].split('\n')[1]
 assert 10 < len(short_description) < 255
-long_description = open(_path_under_setup('README.rst')).read()
+long_description = io.open(_path_under_setup('README.rst'),
+                           encoding='utf-8').read()
 assert len(long_description) > 100
 
 setup_kwargs = dict(
@@ -110,7 +113,7 @@ if __name__ == '__main__':
     try:
         if TAGGED_RELEASE:
             shutil.move(release_py_path, release_py_path+'__temp__')
-            open(release_py_path, 'wt').write(
+            io.open(release_py_path, 'wt', encoding='utf-8').write(
                 "__version__ = '{}'\n".format(__version__))
         setup(**setup_kwargs)
     finally:
