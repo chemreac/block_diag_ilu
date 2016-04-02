@@ -1,3 +1,11 @@
+v0.2.2
+======
+- More robust setup.py
+
+v0.2.1
+======
+- More robust setup.py
+
 v0.2.0
 ======
 - solve may now return non-zero exit (in C++, raises error in Python)

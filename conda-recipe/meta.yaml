@@ -5,22 +5,19 @@ package:
 source:
     path: ../
 
-# You may want to exchange openblas with e.g. lapack
 build:
-  string: np{{np}}py{{py}}_o0
-  features:
-    - openblas
+  number: 2
 
 requirements:
   build:
     - python
     - numpy
     - cython
-    - openblas
+    - lapack
   run:
     - python
     - numpy
-    - openblas
+    - lapack
 
 
 test:
