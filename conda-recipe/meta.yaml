@@ -1,9 +1,9 @@
 package:
-    name: block_diag_ilu
-    version: 0.3.0.git
+  name: block_diag_ilu
+  version: 0.3.0.git
 
 source:
-    path: ../
+  path: ../
 
 build:
   number: 2

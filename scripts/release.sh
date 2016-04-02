@@ -19,7 +19,7 @@ PKG_UPPER=$(echo $PKG | tr '[:lower:]' '[:upper:]')
 ./scripts/run_tests.sh
 env ${PKG_UPPER}_RELEASE_VERSION=v$VERSION python setup.py sdist
 for CONDA_PY in 2.7 3.4 3.5; do
-    for CONDA_NPY in 1.10 1.11; do
+    for CONDA_NPY in 1.11; do
         PATH=$CONDA_PATH:$PATH ./scripts/build_conda_recipe.sh \
             v$VERSION --python $CONDA_PY --numpy $CONDA_NPY
     done
@@ -44,7 +44,7 @@ sed -i -E -e "s/version:(.+)/version: $VERSION/" \
 scp -r dist/conda-recipe-$VERSION/ $PKG@$SERVER:~/public_html/conda-recipes/
 scp dist/${PKG}-$VERSION.tar.gz $PKG@$SERVER:~/public_html/releases/
 for CONDA_PY in 2.7 3.4 3.5; do
-    for CONDA_NPY in 1.10 1.11; do
+    for CONDA_NPY in 1.11; do
         ssh $PKG@$SERVER "source /etc/profile; conda-build --python $CONDA_PY --numpy $CONDA_NPY ~/public_html/conda-recipes/conda-recipe-$VERSION/"
     done
 done
