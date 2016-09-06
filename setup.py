@@ -33,7 +33,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
     ]
     if USE_CYTHON:
         from Cython.Build import cythonize
-        ext_modules = cythonize(ext_modules, include_path=['./include'], gdb_debug=True)
+        ext_modules = cythonize(ext_modules, include_path=['block_diag_ilu/include'], gdb_debug=True)
     macros = [('BLOCK_DIAG_ILU_PY', None)]
     if WITH_BLOCK_DIAG_ILU_DGETRF:
         macros.append(('WITH_BLOCK_DIAG_ILU_DGETRF', None))
@@ -41,7 +41,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         macros.append(('WITH_BLOCK_DIAG_ILU_OPENMP', None))
     ext_modules[0].language = 'c++'
     ext_modules[0].extra_compile_args = ['-std=c++11']
-    ext_modules[0].include_dirs = [_path_under_setup('include'), np.get_include()]
+    ext_modules[0].include_dirs = ['block_diag_ilu/include', np.get_include()]
     ext_modules[0].define_macros += macros
     ext_modules[0].libraries += [os.environ.get('LLAPACK', 'lapack')]
 
@@ -99,7 +99,7 @@ setup_kwargs = dict(
     url='https://github.com/bjodah/' + pkg_name,
     license='BSD',
     packages=[pkg_name] + tests,
-    package_data={pkg_name: ['include/*.hpp']},
+    include_package_data=True,
     setup_requires=['numpy'],
     install_requires=['numpy'],
     ext_modules=ext_modules,
