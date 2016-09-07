@@ -12,7 +12,7 @@ from .. import (
 
 def test_get_include():
     assert get_include().endswith('include')
-    assert os.listdir(get_include())[0] == 'block_diag_ilu.hpp'
+    assert 'block_diag_ilu.hpp' in os.listdir(get_include())
 
 
 def _get_A():
