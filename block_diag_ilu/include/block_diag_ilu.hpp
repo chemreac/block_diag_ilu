@@ -206,7 +206,7 @@ namespace block_diag_ilu {
     template <typename Real_t = double>
     class ColMajBandedView : public ViewBase<ColMajBandedView<Real_t>, Real_t> {
         // For use with LAPACK's banded matrix layout.
-        // Note that the matrix is padded with ``mupper`` extra bands.
+        // Note that the matrix is padded with ``mlower`` extra bands.
     public:
         Real_t *data;
         const uint ld, offset;
