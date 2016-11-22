@@ -1,33 +1,45 @@
+{% set name = "block_diag_ilu" %}
+{% set version = "0.2.3+git" %}
+{% set variant = "openblas" %}
+
 package:
-  name: block_diag_ilu
-  version: 0.3.0.git
+  name: {{ name|lower }}
+  version: {{ version }}
 
 source:
-  path: ../
+  git_url: ../
 
 build:
-  number: 2
+  number: 0
+  features:
+    - blas_{{ variant }}  # [not win]
 
 requirements:
   build:
+    - blas 1.1 {{ variant }}  # [not win]
+    - openblas 0.2.19*  # [not win]
     - python
-    - numpy
     - cython
-    - lapack
+    - numpy
   run:
+    - blas 1.1 {{ variant }}  # [not win]
+    - openblas 0.2.19*  # [not win]
     - python
     - numpy
-    - lapack
-
 
 test:
   requires:
-    - python
-    - pytest
-
+    - scipy
   imports:
     - block_diag_ilu
 
 about:
-  home: https://github.com/chemreac/block_diag_ilu
-  license: Simplified BSD license
+  home: https://github.com/chemreac/{{ name }}
+  license: BSD 2-Clause
+  license_file: LICENSE
+  summary: 'Incomplete LU factorization of block diagonal matrices with weak sub-/super-diagonals.'
+
+
+extra:
+  recipe-maintainers:
+    - bjodah
