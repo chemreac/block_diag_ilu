@@ -7,7 +7,7 @@ block_diag_ilu
 
 
 ``block_diag_ilu`` is an open source `C++ single header-file implementation
-<https://github.com/chemreac/block_diag_ilu/tree/master/include>`_ of an
+<https://github.com/chemreac/block_diag_ilu/tree/master/block_diag_ilu/include>`_ of an
 incomplete LU decomposition routine suitable for diagonally dominant (square) block diagonal
 matrices with sub- and super diagonals of small magnitude. It is useful for
 preconditioning linear systems. The use-case in mind is for integrating discretized PDEs of mixed

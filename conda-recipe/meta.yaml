@@ -29,6 +29,10 @@ requirements:
 
 test:
   requires:
+    - blas 1.1 {{ variant }}  # [not win]
+    - openblas 0.2.19*  # [not win]
+    - python
+    - numpy
     - scipy
   imports:
     - block_diag_ilu
