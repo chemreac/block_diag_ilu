@@ -79,7 +79,7 @@ namespace block_diag_ilu {
     }
 #endif
 
-#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+#if defined(BLOCK_DIAG_ILU_WITH_DGETRF)
     template<typename T> inline uint getrf_square(const uint dim, T * const __restrict__ a,
                                                   const uint lda, int * const __restrict__ ipiv) noexcept;
 #else
@@ -577,7 +577,7 @@ namespace block_diag_ilu {
             int info_ = 0;
             const auto nblocks = this->view.nblocks;
             const auto ndiag = this->view.ndiag;  // narrowing cast
-#if !defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+#if !defined(BLOCK_DIAG_ILU_WITH_DGETRF)
             // LAPACK take pointers to integers
             int blockw = this->view.blockw;
             int ld_blocks = this->view.ld_blocks;
@@ -586,7 +586,7 @@ namespace block_diag_ilu {
 #pragma omp parallel for schedule(static)
 #endif
             for (std::size_t bi=0; bi<nblocks; ++bi){
-#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+#if defined(BLOCK_DIAG_ILU_WITH_DGETRF)
                 int info = getrf_square<Real_t>(
                            blockw,
                            &(this->view.block(bi, 0, 0)),
@@ -682,7 +682,7 @@ namespace block_diag_ilu {
 
 }
 
-#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+#if defined(BLOCK_DIAG_ILU_WITH_DGETRF)
 // int will be enough (flops of a LU decomoposition scales as N**3, and besides this is unblocked)
 template <typename Real_t = double>
 inline uint block_diag_ilu::getrf_square(const uint dim, Real_t * const __restrict__ a,

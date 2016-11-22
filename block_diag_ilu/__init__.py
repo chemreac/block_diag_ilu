@@ -15,5 +15,4 @@ from .datastruct import diag_data_len, alloc_compressed, get_compressed
 
 def get_include():
     from pkg_resources import resource_filename, Requirement
-    return resource_filename(Requirement.parse(__name__),
-                             '%s/include' % __name__)
+    return resource_filename(Requirement.parse(__name__), '%s/include' % __name__)

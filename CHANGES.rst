@@ -1,3 +1,7 @@
+v0.2.3
+======
+- More robust setup.py
+
 v0.2.2
 ======
 - More robust setup.py
