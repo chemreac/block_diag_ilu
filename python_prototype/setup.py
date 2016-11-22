@@ -13,13 +13,13 @@ if __name__ == '__main__':
         'extra_link_args': [],
         'language': 'c++'
     }
-    if os.environ.get('WITH_BLOCK_DIAG_ILU_DGETRF', '0') == '1':
-        kwargs['extra_compile_args'] += ['-DWITH_BLOCK_DIAG_ILU_DGETRF']
+    if os.environ.get('BLOCK_DIAG_ILU_WITH_DGETRF', '0') == '1':
+        kwargs['extra_compile_args'] += ['-DBLOCK_DIAG_ILU_WITH_DGETRF']
     else:
         kwargs['libraries'] = ['lapack']
 
-    if os.environ.get('WITH_BLOCK_DIAG_ILU_OPENMP', '0') == '1':
-        kwargs['extra_compile_args'] += ['-fopenmp', '-DWITH_BLOCK_DIAG_ILU_OPENMP']
+    if os.environ.get('BLOCK_DIAG_ILU_WITH_OPENMP', '0') == '1':
+        kwargs['extra_compile_args'] += ['-fopenmp', '-DBLOCK_DIAG_ILU_WITH_OPENMP']
         kwargs['extra_link_args'] += ['-fopenmp']
 
     ext_modules = [

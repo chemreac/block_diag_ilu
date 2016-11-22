@@ -1,7 +1,11 @@
 #!/bin/bash -xeu
+if ! [[ $(python setup.py --version) =~ ^[0-9]+.* ]]; then
+    exit 1
+fi
+
 cd tests
 make
-make clean; make DEFINES=-DWITH_BLOCK_DIAG_ILU_DGETRF EXTRA_FLAGS="-fopenmp"
+make clean; make DEFINES=-DBLOCK_DIAG_ILU_WITH_DGETRF EXTRA_FLAGS="-fopenmp"
 make clean; make DEFINES=-DNDEBUG
 make clean; make CXX=clang++-3.8
 
@@ -21,15 +25,15 @@ done
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
     rm _block_diag_ilu.so
-    WITH_BLOCK_DIAG_ILU_DGETRF=1 python setup.py build_ext -i
+    BLOCK_DIAG_ILU_WITH_DGETRF=1 python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
     rm _block_diag_ilu.so
-    WITH_BLOCK_DIAG_ILU_OPENMP=1 WITH_BLOCK_DIAG_ILU_DGETRF=0 python setup.py build_ext -i
+    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_DGETRF=0 python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
     rm _block_diag_ilu.so
-    WITH_BLOCK_DIAG_ILU_OPENMP=1 WITH_BLOCK_DIAG_ILU_DGETRF=1 python setup.py build_ext -i
+    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_DGETRF=1 python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
 
@@ -52,4 +56,4 @@ assert "block_diag_ilu.pxd" in os.listdir(gi())
 '
 )
 
-! grep "DO-NOT-MERGE!" -R . --exclude ci.sh
+if grep "DO-NOT-MERGE!" -R . --exclude ci.sh; then exit 1; fi

@@ -1,6 +1,8 @@
 build:
   image: bjodah/bjodahimg16:v1.2
   commands:
+    - python2 -m pip install --upgrade pip
+    - python3 -m pip install --upgrade pip
     - ./scripts/ci.sh block_diag_ilu
 
 deploy:

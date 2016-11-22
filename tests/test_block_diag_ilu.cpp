@@ -958,7 +958,7 @@ TEST_CASE( "block_sub_sup__offset", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.sub(1, 0, 1) == 3 );
 }
 
-#if defined(WITH_BLOCK_DIAG_ILU_DGETRF)
+#if defined(BLOCK_DIAG_ILU_WITH_DGETRF)
 TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
     constexpr int nblocks = 3;
     constexpr int blockw = 2;
