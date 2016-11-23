@@ -1,3 +1,7 @@
+v0.2.5
+======
+- Enhanced conda recipe
+
 v0.2.4
 ======
 - More robust setup.py

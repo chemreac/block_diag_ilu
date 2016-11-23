@@ -1,8 +1,11 @@
 #!/bin/bash -xeu
 # Usage:
 #
-#    $ ./scripts/release.sh v1.2.3 ~/anaconda2/bin myserver.example.com GITHUB_USER GITHUB_REPO GIT_REMOTE
+#    $ ./scripts/release.sh v1.2.3 ANACONDA_PATH myserver.example.com GITHUB_USER GITHUB_REPO GIT_REMOTE
 #
+# e.g.
+#
+#    $ ./scripts/release.sh v0.2.5 /opt/users/miniconda3/bin hera.physchem.kth.se chemreac block_diag_ilu git@github.com:chemreac/block_diag_ilu
 
 if [[ $1 != v* ]]; then
     echo "Argument does not start with 'v'"
