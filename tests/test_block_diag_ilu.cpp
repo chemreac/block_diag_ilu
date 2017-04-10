@@ -24,13 +24,13 @@ block_diag_ilu::ColMajBlockDiagMat<double> get_test_case_colmajblockdiagmat(){
             1, 2, 3, 4 }};
     std::array<double,blockw*(nblocks-1)> sup {{
             2, 3, 4, 5 }};
-    for (size_t bi=0; bi<3; ++bi)
-        for (size_t ci=0; ci<2; ++ci){
+    for (int bi=0; bi<3; ++bi)
+        for (int ci=0; ci<2; ++ci){
             if (bi<2){
                 cmbdm.view.sub(0, bi, ci) = sub[bi*2+ci];
                 cmbdm.view.sup(0, bi, ci) = sup[bi*2+ci];
             }
-            for (size_t ri=0; ri<2; ++ri)
+            for (int ri=0; ri<2; ++ri)
                 cmbdm.view.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
         }
     return cmbdm;
@@ -424,9 +424,9 @@ TEST_CASE( "dot_vec2", "[ColMajBlockDiagMat]" ) {
     const int ndiag = 2;
 
     block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag};
-    for (size_t bi=0; bi<nblocks; ++bi)
-        for (size_t ci=0; ci<blockw; ++ci){
-            for (size_t ri=0; ri<blockw; ++ri)
+    for (int bi=0; bi<nblocks; ++bi)
+        for (int ci=0; ci<blockw; ++ci){
+            for (int ri=0; ri<blockw; ++ri)
                 cmbdm.view.block(bi, ri, ci) = 1.2*bi + 4.1*ci - 2.7*ri;
         }
 
@@ -725,7 +725,7 @@ block_diag_ilu::ColMajBandedView<double> get_cmbv(std::array<double, 28>& arr){
     const int blockw = 2;
     const int nblocks = 2;
     const int ndiag = 1;
-    const uint nouter = 2;
+    const int nouter = 2;
     return block_diag_ilu::ColMajBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
@@ -978,13 +978,13 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
             1, 2, 3, 4 }};
     std::array<long double,blockw*(nblocks-1)> sup {{
             2, 3, 4, 5 }};
-    for (size_t bi=0; bi<3; ++bi)
-        for (size_t ci=0; ci<2; ++ci){
+    for (int bi=0; bi<3; ++bi)
+        for (int ci=0; ci<2; ++ci){
             if (bi<2){
                 cmbdm.view.sub(0, bi, ci) = sub[bi*2+ci];
                 cmbdm.view.sup(0, bi, ci) = sup[bi*2+ci];
             }
-            for (size_t ri=0; ri<2; ++ri)
+            for (int ri=0; ri<2; ++ri)
                 cmbdm.view.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
         }
 

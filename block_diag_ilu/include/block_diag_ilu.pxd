@@ -1,12 +1,12 @@
 cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
     cdef cppclass ColMajBlockDiagView[T]:
-        ColMajBlockDiagView(T*, T*, T*, size_t, unsigned, unsigned)
-        T& block(size_t, unsigned, unsigned)
-        T& sub(unsigned, size_t, unsigned)
-        T& sup(unsigned, size_t, unsigned)
-        void set_block(size_t, unsigned, unsigned, T)
-        void set_sub(unsigned, size_t, unsigned, T)
-        void set_sup(unsigned, size_t, unsigned, T)
+        ColMajBlockDiagView(T*, T*, T*, size_t, int, int)
+        T& block(size_t, int, int)
+        T& sub(int, size_t, int)
+        T& sup(int, size_t, int)
+        void set_block(size_t, int, int, T)
+        void set_sub(int, size_t, int, T)
+        void set_sup(int, size_t, int, T)
 
     cdef cppclass ILU[T]:
         ILU(ColMajBlockDiagView[T])
