@@ -583,7 +583,17 @@ namespace block_diag_ilu {
             int ld_blocks = this->view.ld_blocks;
 #else
             const auto blockw = this->view.blockw;
-#pragma omp parallel for schedule(static)
+#endif
+#if defined(BLOCK_DIAG_ILU_WITH_OPENMP)
+            char * num_threads_var = std::getenv("BLOCK_DIAG_ILU_NUM_THREADS");
+            int nt = (num_threads_var) ? std::atoi(num_threads_var) : 1;
+            if (nt < 1)
+                nt = 1;
+            const int min_work_per_thread = 1; // could be increased
+            if (static_cast<unsigned>(nt) > nblocks/min_work_per_thread)
+                nt = nblocks/min_work_per_thread;
+
+            #pragma omp parallel for num_threads(nt) schedule(static)  // OMP_NUM_THREADS should be 1 for openblas LU (small matrices)
 #endif
             for (std::size_t bi=0; bi<nblocks; ++bi){
 #if defined(BLOCK_DIAG_ILU_WITH_DGETRF)

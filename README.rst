@@ -20,9 +20,9 @@ A picture is worth a thousand words, so if your matrix looks anything like this:
    :scale: 50%
    :alt: Diagonally dominant block diagonal matrix with sub- and super-diagonals
    
-its LU decomposition then looks like this:
+then its LU decomposition then looks like this:
 
-.. image:: https://raw.githubusercontent.com/bjodah/block_diag_ilu/master/scripts/lu.png
+.. image:: https://raw.githubusercontent.com/bjodah/block_diag_ilu/master/scripts/matrix_lu.png
    :scale: 50%
    :alt: LU decomposition of same matrix
 
@@ -33,16 +33,22 @@ Conditional compilation
 -----------------------
 The following macros affect the compilation:
 
-+--------------------------+-----------------------------------------------+---------------+
-|Macro name                |Action (when defined)                          |Default        |
-+==========================+===============================================+===============+
-|NDEBUG                    |use ``std::unique_ptr`` instead of             |undefined      |
-|                          |``std::vector`` as underlying data structure.  |               |
-+--------------------------+-----------------------------------------------+---------------+
-|BLOCK_DIAG_ILU_WITH_DGETRF|Use unblocked (parallell) internal             |undefined      |
-|                          |implementation of LAPACK's ``dgetrf``.         |               |
-+--------------------------+-----------------------------------------------+---------------+
++---------------------------+-----------------------------------------------+---------------+
+|Macro name                 |Action (when defined)                          |Default        |
++===========================+===============================================+===============+
+|NDEBUG                     |use ``std::unique_ptr`` instead of             |undefined      |
+|                           |``std::vector`` as underlying data structure.  |               |
++---------------------------+-----------------------------------------------+---------------+
+|BLOCK_DIAG_ILUT_WITH_OPENMP|factorize blocks in parallel. Set the          |undefined      |
+|                           |environment variable                           |               |
+|                           |`BLOCK_DIAG_ILU_NUM_THREADS` to control number |               |
+|                           |of threads.                                    |               |
++---------------------------+-----------------------------------------------+---------------+
+|BLOCK_DIAG_ILU_WITH_DGETRF |Use unblocked (parallell) internal             |undefined      |
+|                           |implementation of LAPACK's ``dgetrf``.         |               |
++---------------------------+-----------------------------------------------+---------------+
 
+``setup.py`` will set these when envinronment variables with those are set to "1".
 
 License
 -------

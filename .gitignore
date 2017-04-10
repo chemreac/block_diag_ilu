@@ -12,3 +12,6 @@ build/
 cython_debug/
 dist/
 block_diag_ilu.egg-info/
+scripts/*.png
+!scripts/matrix.png
+!scripts/matrix_lu.png

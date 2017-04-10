@@ -47,9 +47,9 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         ext_modules = cythonize(ext_modules, include_path=[package_include])
     print(ext_modules)
     macros = [('BLOCK_DIAG_ILU_PY', None)]
-    if env['WITH_DGETRF'] == '1':
+    if env['BLOCK_DIAG_ILU_WITH_DGETRF'] == '1':
         macros.append(('BLOCK_DIAG_ILU_WITH_DGETRF', None))
-    if env['WITH_OPENMP'] == '1':
+    if env['BLOCK_DIAG_ILU_WITH_OPENMP'] == '1':
         macros.append(('BLOCK_DIAG_ILU_WITH_OPENMP', None))
     ext_modules[0].language = 'c++'
     ext_modules[0].extra_compile_args = ['-std=c++11']
@@ -78,14 +78,15 @@ else:  # set `__version__` from _release.py:
     exec(open(release_py_path).read())
     if __version__.endswith('git'):
         try:
-            _git_version = subprocess.check_output(['git', 'describe']).rstrip().decode('utf-8')
+            _git_version = subprocess.check_output(
+                ['git', 'describe', '--dirty']).rstrip().decode('utf-8').replace('-dirty', '+dirty')
         except subprocess.CalledProcessError:
             warnings.warn("A git-archive is being installed - version information incomplete.")
         else:
-            if 'develop' not in sys.argv:
+            if 'develop' not in sys.argv and '-' in _git_version:
                 warnings.warn("Using git to derive version: dev-branches may compete.")
-                __version__ = re.sub('v([0-9.]+)-(\d+)-(\w+)', r'\1.post\2+\3', _git_version)  # .dev < '' < .post
-
+                _git_version = re.sub('v([0-9.]+)-(\d+)-(\w+)', r'v\1.post\2+\3', _git_version)  # .dev < '' < .post
+        __version__ = _git_version[1:]
 
 classifiers = [
     "Development Status :: 4 - Beta",
