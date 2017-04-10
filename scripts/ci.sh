@@ -64,6 +64,7 @@ assert "block_diag_ilu.pxd" in os.listdir(gi())
     python3 generate_infographics.py --ndiag 3 --N 15
     python3 generate_infographics.py --savefig periodic -p --ndiag 3 --N 15
     python3 generate_infographics.py --savefig interpolating -i --ndiag 3 --N 15
+    mkdir -p ../deploy/public_html/branches/"${CI_BRANCH}"/
     cp *.png ../deploy/public_html/branches/"${CI_BRANCH}"/
 )
 

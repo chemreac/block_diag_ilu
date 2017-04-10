@@ -646,9 +646,9 @@ namespace block_diag_ilu {
                     for (int lci = 0; lci < li; ++lci){
                         s += this->view.block(bri, li, lci)*y[bri*blockw + lci];
                     }
+                    const int ci = this->colbyrow[bri*blockw + li];
                     for (int di = 1; di < ndiag + 1; ++di){
                         if (bri >= di) {
-                            const int ci = this->colbyrow[bri*blockw + li];
                             s += (this->view.sub(di-1, bri-di, ci) * y[(bri-di)*blockw + ci]);
                         }
                     }
@@ -661,9 +661,9 @@ namespace block_diag_ilu {
                     for (int ci = li; ci < blockw; ++ci){
                         s += this->view.block(bri-1, li-1, ci)*x[(bri-1)*blockw + ci];
                     }
+                    const int ci = this->colbyrow[(bri-1)*blockw + li-1];
                     for (int di = 1; di <= ndiag; ++di) {
                         if ((bri-1) < nblocks - di){
-                            const int ci = this->colbyrow[(bri-1)*blockw + li-1];
                             s += this->view.sup(di-1, bri-1, ci)*x[(bri-1+di)*blockw + ci];
                         }
                     }
