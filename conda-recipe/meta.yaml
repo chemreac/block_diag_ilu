@@ -34,6 +34,7 @@ test:
     - python
     - numpy
     - scipy
+    - pytest
   imports:
     - block_diag_ilu
 

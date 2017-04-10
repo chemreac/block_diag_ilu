@@ -105,15 +105,22 @@ namespace block_diag_ilu {
             if (lri != lci)
                 return 0.0;
             if (bri > bci){ // sub diagonal
-                if ((bri - bci) > m_ndiag)
-                    return 0.0;
-                else
+                if (bri - bci > m_ndiag){
+                    if (self.m_nblocks - bri + bci <= self.m_nsat)
+                        return self.sat(-self.m_nblocks + bri - bci, bci, lci);
+                    else
+                        return 0.0;
+                } else{
                     return self.sub(bri-bci-1, bci, lci);
+                }
             } else { // super diagonal
-                if ((bci - bri) > m_ndiag)
+                if (bci - bri > m_ndiag){
+                    if (self.m_nblocks - bci + bri <= self.m_nsat)
+                        return self.sat(self.m_nblocks - bci + bri, bri, lri);
                     return 0.0;
-                else
+                } else {
                     return self.sup(bci-bri-1, bri, lri);
+                }
             }
         }
         int get_banded_ld() const noexcept {
@@ -135,6 +142,11 @@ namespace block_diag_ilu {
                      const int coli, Real_t value) const noexcept {
             const auto& self = *static_cast<const T*>(this);  // CRTP
             self.sup(diagi, blocki, coli) = value;
+        }
+        void set_sat(const int sati, const int blocki,
+                     const int coli, Real_t value) const noexcept {
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            self.sat(sati, blocki, coli) = value;
         }
 #endif
     };
@@ -209,15 +221,17 @@ namespace block_diag_ilu {
     };
 
     template <typename Real_t = double> class ColMajBlockDiagMat;
-    template <typename Real_t = double>
-    class ColMajBlockDiagView : public ViewBase<ColMajBlockDiagView<Real_t>, Real_t> {
+
+    template <typename Real_t = double> class ColMajBlockDiagView :
+        public ViewBase<ColMajBlockDiagView<Real_t>, Real_t> {
     public:
-        Real_t *m_block_data, *m_sub_data, *m_sup_data;
+        Real_t *m_block_data, *m_sub_data, *m_sup_data, *m_sat_data;
         // int will suffice, decomposition scales as N**3 even iterative methods (N**2) would need months at 1 TFLOPS
+        const int m_nsat;
         const int m_ld_blocks;
         const int m_block_stride;
         const int m_ld_diag;
-        const int m_block_data_len, m_diag_data_len;
+        const int m_block_data_len, m_diag_data_len, m_sat_data_len;
         // ld_block for cache alignment and avoiding false sharing
         // block_stride for avoiding false sharing
         ColMajBlockDiagView(Real_t * const block_data,
@@ -226,6 +240,8 @@ namespace block_diag_ilu {
                             const int nblocks,
                             const int blockw,
                             const int ndiag,
+                            Real_t * const sat_data=nullptr,
+                            const int nsat=0,
                             const int ld_blocks=0,
                             const int block_stride=0,
                             const int ld_diag=0) :
@@ -233,12 +249,36 @@ namespace block_diag_ilu {
             m_block_data(block_data),
             m_sub_data(sub_data),
             m_sup_data(sup_data),
+            m_sat_data(sat_data),
+            m_nsat(nsat),
             m_ld_blocks((ld_blocks == 0) ? blockw : ld_blocks),
             m_block_stride((block_stride == 0) ? m_ld_blocks*blockw : block_stride),
             m_ld_diag((ld_diag == 0) ? m_ld_blocks : ld_diag),
             m_block_data_len(nblocks*m_block_stride),
-            m_diag_data_len(m_ld_diag*(nblocks*ndiag - (ndiag*ndiag + ndiag)/2))
+            m_diag_data_len(m_ld_diag*(nblocks*ndiag - (ndiag*ndiag + ndiag)/2)),
+            m_sat_data_len(blockw*(nsat*nsat + nsat))
             {}
+        Real_t& block(const int blocki, const int rowi, const int coli) const noexcept {
+            return m_block_data[blocki*m_block_stride + coli*(m_ld_blocks) + rowi];
+        }
+        Real_t& sub(const int diagi, const int blocki, const int coli) const noexcept {
+            return m_sub_data[diag_idx(diagi, blocki, coli)];
+        }
+        Real_t& sup(const int diagi, const int blocki, const int coli) const noexcept {
+            return m_sup_data[diag_idx(diagi, blocki, coli)];
+        }
+        Real_t& sat(const int sati, const int blocki, const int coli) const {
+            if ((sati == 0) or (sati < -m_nsat) or (sati > m_nsat)){
+                throw std::runtime_error("invalid sati");
+            }
+            int skip;
+            if (sati > 0){
+                skip = ((m_nsat*m_nsat+m_nsat) + (sati*sati - sati))/2;
+            } else {
+                skip = (sati*sati + sati)/2;
+            }
+            return m_sat_data[(skip+blocki)*this->m_blockw + coli];
+        }
         void scale_diag_add(const ColMajBlockDiagView<Real_t>& source, Real_t scale=1, Real_t diag_add=0){
             const auto nblocks = (this->m_nblocks);
             const auto blockw = (this->m_blockw);
@@ -262,18 +302,29 @@ namespace block_diag_ilu {
                     }
                 }
             }
+            for (int sati=0; sati < m_nsat; ++sati){
+                for (int bi=0; bi <= sati; ++bi){
+                    for (int ci = 0; ci < blockw; ++ci){
+                        this->sat(sati + 1, bi, ci) = scale * source.sat(sati + 1, bi, ci);
+                        this->sat(-sati - 1, bi, ci) = scale * source.sat(-sati - 1, bi, ci);
+                    }
+                }
+            }
         }
         ColMajBlockDiagMat<Real_t> copy_to_matrix() const {
-            auto mat = ColMajBlockDiagMat<Real_t> {this->m_nblocks, this->m_blockw, this->m_ndiag, m_ld_blocks, m_block_stride, m_ld_diag};
+            auto mat = ColMajBlockDiagMat<Real_t> {this->m_nblocks, this->m_blockw, this->m_ndiag, this->m_nsat,
+                                                   m_ld_blocks, m_block_stride, m_ld_diag};
             mat.m_view.scale_diag_add(*this);
             return mat;
         }
         void set_data_pointers(buffer_ptr_t<Real_t> block_data,
                                buffer_ptr_t<Real_t> sub_data,
-                               buffer_ptr_t<Real_t> sup_data) noexcept {
+                               buffer_ptr_t<Real_t> sup_data,
+                               buffer_ptr_t<Real_t> sat_data) noexcept {
             m_block_data = block_data;
             m_sub_data = sub_data;
             m_sup_data = sup_data;
+            m_sat_data = sat_data;
         }
         void dot_vec(const Real_t * const vec, Real_t * const out){
             // out need not be zeroed out before call
@@ -298,9 +349,17 @@ namespace block_diag_ilu {
                     }
                 }
             }
+            for (int sati=0; sati<m_nsat; ++sati){
+                for (int bi=0; bi<=sati; ++bi){
+                    for (int ci=0; ci<blkw; ++ci){
+                        out[bi*blkw + ci] += this->sat(sati+1, bi, ci)*vec[(nblk-1-sati+bi)*blkw + ci];
+                        out[(nblk-1-sati+bi)*blkw + ci] += this->sat(-sati-1, bi, ci)*vec[bi*blkw + ci];
+                    }
+                }
+            }
         }
         Real_t rms_diag(int diag_idx) {
-            // returns the root means square of `diag_idx`:th diagonal
+            // returns the root mean square of `diag_idx`:th diagonal
             // (diag_idx < 0 denotes sub diagonals, diag_idx == 0 deontes main diagonal,
             // and diag_idx > 0 denotes super diagonals)
             Real_t sum = 0;
@@ -363,18 +422,6 @@ namespace block_diag_ilu {
             return (n_diag_blocks_skip + blocki)*(m_ld_diag) + coli;
         }
     public:
-        Real_t& block(const int blocki, const int rowi,
-                             const int coli) const noexcept {
-            return m_block_data[blocki*m_block_stride + coli*(m_ld_blocks) + rowi];
-        }
-        Real_t& sub(const int diagi, const int blocki,
-                           const int coli) const noexcept {
-            return m_sub_data[diag_idx(diagi, blocki, coli)];
-        }
-        Real_t& sup(const int diagi, const int blocki,
-                           const int coli) const noexcept {
-            return m_sup_data[diag_idx(diagi, blocki, coli)];
-        }
         buffer_t<Real_t> to_banded() const {
             const auto ld_result = this->get_banded_ld();
             const auto ntr = this->m_nouter;
@@ -407,8 +454,7 @@ namespace block_diag_ilu {
         }
     };
 
-    template <typename Real_t = double>
-    class LU {  // Wrapper around DGBTRF & DGBTRS from LAPACK
+    template <typename Real_t = double> class LU {  // Wrapper around DGBTRF & DGBTRS from LAPACK
         static_assert(sizeof(Real_t) == 8, "LAPACK DGBTRF & DGBTRS operates on 64-bit IEEE 754 floats.");
 #ifdef BLOCK_DIAG_ILU_UNIT_TEST
     public:
@@ -460,9 +506,8 @@ namespace block_diag_ilu {
         };
     };
 
-    template <typename Real_t>
-    class ColMajBlockDiagMat {
-        buffer_t<Real_t> m_block_data, m_sub_data, m_sup_data;
+    template <typename Real_t> class ColMajBlockDiagMat {
+        buffer_t<Real_t> m_block_data, m_sub_data, m_sup_data, m_sat_data;
     public:
         ColMajBlockDiagView<Real_t> m_view;
         const bool m_contiguous;
@@ -478,28 +523,32 @@ namespace block_diag_ilu {
         ColMajBlockDiagMat(const int nblocks,
                            const int blockw,
                            const int ndiag,
+                           const int nsat,
                            const int ld_blocks=0,
                            const int block_stride=0,
                            const int ld_diag=0,
                            const bool contiguous=true) :
             m_view(nullptr, nullptr, nullptr, nblocks, blockw,
-                   ndiag, ld_blocks, block_stride, ld_diag),
+                   ndiag, nullptr, nsat, ld_blocks, block_stride, ld_diag),
             m_contiguous(contiguous)
         {
             if (m_contiguous){
                 m_block_data = buffer_factory<Real_t>(m_view.m_block_data_len +
-                                                      2*m_view.m_diag_data_len);
+                                                      2*m_view.m_diag_data_len + m_view.m_sat_data_len);
                 auto raw_ptr = this->get_block_data_raw_ptr();
                 m_view.set_data_pointers(raw_ptr,
                                          raw_ptr + m_view.m_block_data_len,
-                                         raw_ptr + m_view.m_block_data_len + m_view.m_diag_data_len);
+                                         raw_ptr + m_view.m_block_data_len + m_view.m_diag_data_len,
+                                         raw_ptr + m_view.m_block_data_len + m_view.m_diag_data_len*2);
             } else {
                 m_block_data = buffer_factory<Real_t>(m_view.m_block_data_len);
                 m_sub_data = buffer_factory<Real_t>(m_view.m_diag_data_len);
                 m_sup_data = buffer_factory<Real_t>(m_view.m_diag_data_len);
+                m_sat_data = buffer_factory<Real_t>(m_view.m_sat_data_len);
                 m_view.set_data_pointers(buffer_get_raw_ptr(m_block_data),
                                          buffer_get_raw_ptr(m_sub_data),
-                                         buffer_get_raw_ptr(m_sup_data));
+                                         buffer_get_raw_ptr(m_sup_data),
+                                         buffer_get_raw_ptr(m_sat_data));
             }
         }
     };
@@ -533,8 +582,7 @@ namespace block_diag_ilu {
         return n*(N*ndiag - (ndiag*ndiag + ndiag)/2);
     }
 
-    template<typename Real_t = double>
-    class ILU_inplace {
+    template<typename Real_t = double> class ILU_inplace {
     public:
         ColMajBlockDiagView<Real_t> m_view;
         buffer_t<int> m_ipiv, m_rowbycol, m_colbyrow;
@@ -591,13 +639,17 @@ namespace block_diag_ilu {
                         &(m_ipiv[bi*blockw]),
                         &info);
 #endif
-                if ((info != 0) && (info_ == 0))
+                if ((info != 0) and (info_ == 0))
                     info_ = info;
-                for (int ci = 0; ci < (int)blockw; ++ci){
-                    for (int di = 0; (di < ndiag) && (bi+di < (nblocks - 1)); ++di){
+                for (int ci = 0; ci < blockw; ++ci){
+                    for (int di = 0; (di < ndiag) and (bi+di < (nblocks - 1)); ++di){
                         m_view.sub(di, bi, ci) /= m_view.block(bi, ci, ci);
                     }
                 }
+                if (bi < m_view.m_nsat)
+                    for (int sati=bi; sati < m_view.m_nsat; ++sati)
+                        for (int ci=0; ci < blockw; ++ci)
+                            m_view.sat(-sati-1, bi, ci) /= m_view.block(bi, ci, ci);
                 rowpiv2rowbycol(blockw, &m_ipiv[bi*blockw], &m_rowbycol[bi*blockw]);
                 rowbycol2colbyrow(blockw, &m_rowbycol[bi*blockw], &m_colbyrow[bi*blockw]);
             }
@@ -615,11 +667,11 @@ namespace block_diag_ilu {
             //     blockw*nblocks + diagonal index (starting at 1) in U where
             //     first 0 is found
             const auto nblocks = m_view.m_nblocks;
-            const int blockw = m_view.m_blockw;
-            const int ndiag = m_view.m_ndiag;
+            const auto blockw = m_view.m_blockw;
+            const auto ndiag = m_view.m_ndiag;
             auto y = buffer_factory<Real_t>(nblocks*blockw);
             int info = check_nan(b, nblocks*blockw);
-            for (int bri = 0; bri < nblocks; ++bri){
+            for (int bri = 0; bri < nblocks; ++bri){ // Solves Ly = b (from LUx = b)
                 for (int li = 0; li < blockw; ++li){
                     Real_t s = 0.0;
                     for (int lci = 0; lci < li; ++lci){
@@ -627,36 +679,41 @@ namespace block_diag_ilu {
                     }
                     const int ci = m_colbyrow[bri*blockw + li];
                     for (int di = 1; di <= std::min(ndiag, bri); ++di){
-                        s += (m_view.sub(di-1, bri-di, ci) * y[(bri-di)*blockw + ci]);
+                        s += m_view.sub(di-1, bri-di, ci) * y[(bri-di)*blockw + ci];
+                    }
+                    for (int bci=0; bci <= m_view.m_nsat + bri - nblocks; ++bci){
+                        s += m_view.sat(bri-nblocks-bci, bci, ci) * y[bci*blockw + ci];
                     }
                     y[bri*blockw + li] = b[bri*blockw + m_rowbycol[bri*blockw + li]] - s;
                 }
             }
-            for (int bri = nblocks; bri > 0; --bri){
+            for (int bri = nblocks-1; bri >= 0; --bri){ // Solves Ux = y
                 for (int li = blockw; li > 0; --li){
                     Real_t s = 0.0;
                     for (int ci = li; ci < blockw; ++ci){
-                        s += m_view.block(bri-1, li-1, ci)*x[(bri-1)*blockw + ci];
+                        s += m_view.block(bri, li-1, ci)*x[bri*blockw + ci];
                     }
-                    const int ci = m_colbyrow[(bri-1)*blockw + li-1];
-                    for (int di = 1; di <= std::min(nblocks - bri, ndiag); ++di) {
-                        s += m_view.sup(di-1, bri-1, ci)*x[(bri-1+di)*blockw + ci];
+                    const int ci = m_colbyrow[bri*blockw + li-1];
+                    for (int di = 1; di <= std::min(nblocks - bri - 1, ndiag); ++di) {
+                        s += m_view.sup(di-1, bri, ci)*x[(bri+di)*blockw + ci];
                     }
-                    x[(bri-1)*blockw+li-1] = (y[(bri-1)*blockw + li-1] - s)\
-                        /(m_view.block(bri-1, li-1, li-1));
-                    if (m_view.block(bri-1, li-1, li-1) == 0 && info == 0)
-                        info = nblocks*blockw + (bri-1)*blockw + (li-1);
+                    for (int sati=m_view.m_nsat; sati > bri; --sati){
+                        s += m_view.sat(sati, bri, ci)*x[(nblocks - sati + bri)*blockw + ci];
+                    }
+                    x[bri*blockw+li-1] = (y[bri*blockw + li-1] - s)\
+                        /(m_view.block(bri, li-1, li-1));
+                    if (m_view.block(bri, li-1, li-1) == 0 and info == 0)
+                        info = nblocks*blockw + bri*blockw + (li-1);
                 }
             }
             return info;
         }
     };
 
-    template<typename Real_t = double>
-    class ILU{
+    template<typename Real_t = double> class ILU{
         ColMajBlockDiagMat<Real_t> m_mat;
-        ILU_inplace<Real_t> m_ilu_inplace;
     public:
+        ILU_inplace<Real_t> m_ilu_inplace;
         ILU(const ColMajBlockDiagView<Real_t>& view) :
             m_mat(view.copy_to_matrix()),
             m_ilu_inplace(ILU_inplace<Real_t>(m_mat.m_view)) {}

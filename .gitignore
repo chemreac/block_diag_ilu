@@ -15,3 +15,4 @@ block_diag_ilu.egg-info/
 scripts/*.png
 !scripts/matrix.png
 !scripts/matrix_lu.png
+tests/test_block_diag_ilu_omp

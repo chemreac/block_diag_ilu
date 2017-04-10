@@ -9,7 +9,7 @@ block_diag_ilu::ColMajBlockDiagMat<double> get_test_case_colmajblockdiagmat(){
     constexpr int nblocks = 3;
     constexpr int blockw = 2;
     constexpr int ndiag = 1;
-    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag};
+    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag, 0};
     // 5 3 2 # # #
     // 5 8 # 3 # #
     // 1 # 8 4 4 #
@@ -36,6 +36,65 @@ block_diag_ilu::ColMajBlockDiagMat<double> get_test_case_colmajblockdiagmat(){
     return cmbdm;
 }
 
+block_diag_ilu::ColMajBlockDiagMat<double> get_test_case_sat(){
+    // >>> A = np.array([[7, 2, 3, 0, 4, 0],
+    // ...               [6, 6, 0, 7, 0, 8],
+    // ...               [1, 0, 1, 3, 9, 0],
+    // ...               [0, 6, 5, 4, 0, 1],
+    // ...               [8, 0, 2, 0, 9, 7],
+    // ...               [0, 3, 0, 5, 2, 3]])
+    // ...
+    // >>> A.dot([-7, 4, 2, 1, 5, 9])
+    // array([ 27,  68,  42,  49, -29,  96])
+    constexpr int nblocks = 3;
+    constexpr int blockw = 2;
+    constexpr int ndiag = 0;
+    constexpr int nsat = 2;
+    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag, nsat};
+    std::array<double, blockw*blockw*nblocks> blocks {{
+            7, 6, 2, 6,
+            1, 5, 3, 4,
+            9, 2, 7, 3}};
+    for (int bi=0; bi<3; ++bi)
+        for (int ci=0; ci<2; ++ci)
+            for (int ri=0; ri<2; ++ri)
+                cmbdm.m_view.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
+    cmbdm.m_view.sat(1, 0, 0) = 4;
+    cmbdm.m_view.sat(1, 0, 1) = 8;
+    cmbdm.m_view.sat(2, 0, 0) = 3;
+    cmbdm.m_view.sat(2, 0, 1) = 7;
+    cmbdm.m_view.sat(2, 1, 0) = 9;
+    cmbdm.m_view.sat(2, 1, 1) = 1;
+    cmbdm.m_view.sat(-1, 0, 0) = 8;
+    cmbdm.m_view.sat(-1, 0, 1) = 3;
+    cmbdm.m_view.sat(-2, 0, 0) = 1;
+    cmbdm.m_view.sat(-2, 0, 1) = 6;
+    cmbdm.m_view.sat(-2, 1, 0) = 2;
+    cmbdm.m_view.sat(-2, 1, 1) = 5;
+    return cmbdm;
+}
+
+TEST_CASE( "get_global sattelites", "[ViewBase]" ) {
+    auto cmbdm = get_test_case_sat();
+    std::array<double, 36> ref {{7, 2, 3, 0, 4, 0, 6, 6, 0, 7, 0, 8, 1, 0, 1, 3, 9, 0, 0, 6, 5, 4, 0, 1
+                , 8, 0, 2, 0, 9, 7, 0, 3, 0, 5, 2, 3}};
+    for (int i=0; i<36; ++i){
+        REQUIRE( std::abs((cmbdm.m_view.get_global(i/6, i%6) - ref[i])/1e-15) < 1 );
+    }
+}
+
+TEST_CASE( "sattelites", "[ColMajBlockDiagMat]" ) {
+    auto cmbdm = get_test_case_sat();
+    std::array<double, 6> vec {{-7, 4, 2, 1, 5, 9}};
+    std::array<double, 6> res;
+    cmbdm.m_view.dot_vec(&vec[0], &res[0]);
+    REQUIRE( std::abs((res[0] + 15)/1e-14) < 1.0 );
+    REQUIRE( std::abs((res[1] - 61)/1e-14) < 1.0 );
+    REQUIRE( std::abs((res[2] - 43)/1e-14) < 1.0 );
+    REQUIRE( std::abs((res[3] - 47)/1e-14) < 1.0 );
+    REQUIRE( std::abs((res[4] - 56)/1e-14) < 1.0 );
+    REQUIRE( std::abs((res[5] - 54)/1e-14) < 1.0 );
+}
 
 TEST_CASE( "rowpiv2rowbycol" "[ILU_inplace]" ) {
     const std::array<int, 5> piv {{3, 4, 5, 4, 5}};
@@ -208,7 +267,7 @@ TEST_CASE( "addressing multi diag", "[ColMajBlockDiagView]" ) {
     std::array<double, 3*(2+1)> sup {{
             17, 18, X, 19, 20, X,
                 81, 82, X}};
-    block_diag_ilu::ColMajBlockDiagView<double> v {blocks.data(), sub.data(), sup.data(), 3, 2, 2, 3, 7, 3};
+    block_diag_ilu::ColMajBlockDiagView<double> v {blocks.data(), sub.data(), sup.data(), 3, 2, 2, nullptr, 0, 3, 7, 3};
 
     SECTION( "block" ) {
         REQUIRE( v.block(0, 0, 0) == 1 );
@@ -264,7 +323,7 @@ TEST_CASE( "average_diag_weight", "[ColMajBlockDiagView]" ) {
     std::array<double, 3*(2+1)> sup {{
             10, 10, X, 10, 10, X,
                 1, 1, X}};
-    block_diag_ilu::ColMajBlockDiagView<double> v {blocks.data(), sub.data(), sup.data(), 3, 2, 2, 3, 7, 3};
+    block_diag_ilu::ColMajBlockDiagView<double> v {blocks.data(), sub.data(), sup.data(), 3, 2, 2, nullptr, 0, 3, 7, 3};
     auto res_0 = v.average_diag_weight(0);
     auto res_1 = v.average_diag_weight(1);
     REQUIRE( std::abs(res_0 - 10) < 1e-15 );
@@ -283,7 +342,7 @@ TEST_CASE( "set_to_1_minus_gamma_times_other", "[ColMajBlockDiagView]" ) {
     block_diag_ilu::ColMajBlockDiagView<double> v {
         blocks.data(), sub.data(), sup.data(), 3, 2, 1};
 
-    block_diag_ilu::ColMajBlockDiagMat<double> m {3, 2, 1};
+    block_diag_ilu::ColMajBlockDiagMat<double> m {3, 2, 1, 0};
     double gamma = 0.7;
     m.m_view.set_to_1_minus_gamma_times_view(gamma, v);
 
@@ -422,8 +481,9 @@ TEST_CASE( "dot_vec2", "[ColMajBlockDiagMat]" ) {
     const int nblocks = 3;
     const int nx = blockw*nblocks;
     const int ndiag = 2;
+    const int nsat = 0;
 
-    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag};
+    block_diag_ilu::ColMajBlockDiagMat<double> cmbdm {nblocks, blockw, ndiag, nsat};
     for (int bi=0; bi<nblocks; ++bi)
         for (int ci=0; ci<blockw; ++ci){
             for (int ri=0; ri<blockw; ++ri)
@@ -963,7 +1023,8 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
     constexpr int nblocks = 3;
     constexpr int blockw = 2;
     constexpr int ndiag = 1;
-    block_diag_ilu::ColMajBlockDiagMat<long double> cmbdm {nblocks, blockw, ndiag};
+    constexpr int nsat = 1;
+    block_diag_ilu::ColMajBlockDiagMat<long double> cmbdm {nblocks, blockw, ndiag, nsat};
     // 5 3 2 # # #
     // 5 8 # 3 # #
     // 1 # 8 4 4 #

@@ -5,10 +5,13 @@ fi
 
 (
     cd tests
-    make
-    make clean; make DEFINES=-DBLOCK_DIAG_ILU_WITH_DGETRF EXTRA_FLAGS="-fopenmp"
-    make clean; make DEFINES=-DNDEBUG
-    make clean; make CXX=clang++-3.8
+    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-3.8/bin/llvm-symbolizer
+    export ASAN_OPTIONS=symbolize=1
+    make clean; make CXX=clang++-3.8 EXTRA_FLAGS="-fsanitize=address"
+    make clean; make DEFINES=-D_GLIBCXX_DEBUG
+    make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_DGETRF"
+    make clean; make test_block_diag_ilu_omp
+    BLOCK_DIAG_ILU_NUM_THREADS=2 ./test_block_diag_ilu_omp --abortx 1
 )
 
 python3 setup.py sdist
