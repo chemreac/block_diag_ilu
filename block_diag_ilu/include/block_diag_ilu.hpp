@@ -662,10 +662,8 @@ namespace block_diag_ilu {
                         s += this->view.block(bri-1, li-1, ci)*x[(bri-1)*blockw + ci];
                     }
                     const int ci = this->colbyrow[(bri-1)*blockw + li-1];
-                    for (int di = 1; di <= ndiag; ++di) {
-                        if ((bri-1) < nblocks - di){
-                            s += this->view.sup(di-1, bri-1, ci)*x[(bri-1+di)*blockw + ci];
-                        }
+                    for (int di = 1; di <= std::min(nblocks - bri, ndiag); ++di) {
+                        s += this->view.sup(di-1, bri-1, ci)*x[(bri-1+di)*blockw + ci];
                     }
                     x[(bri-1)*blockw+li-1] = (y[(bri-1)*blockw + li-1] - s)\
                         /(this->view.block(bri-1, li-1, li-1));
