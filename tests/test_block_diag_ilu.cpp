@@ -992,10 +992,10 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
     block_diag_ilu::ILU_inplace<long double> ilu(cmbdv);
 
     SECTION( "check lower correctly computed" ) {
-        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 0, 0) - 1/5.L) < 1e-18L );
-        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 0, 1) - 2/5.L) < 1e-18L );
-        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 1, 0) - 3/8.L) < 1e-18L );
-        REQUIRE( block_diag_ilu::absval(ilu.sub_get(0, 1, 1) - 4/2.L) < 1e-18L );
+        REQUIRE( std::abs(ilu.sub_get(0, 0, 0) - 1/5.L) < 1e-18L );
+        REQUIRE( std::abs(ilu.sub_get(0, 0, 1) - 2/5.L) < 1e-18L );
+        REQUIRE( std::abs(ilu.sub_get(0, 1, 0) - 3/8.L) < 1e-18L );
+        REQUIRE( std::abs(ilu.sub_get(0, 1, 1) - 4/2.L) < 1e-18L );
     }
     SECTION( "check upper still perserved" ) {
         REQUIRE( ilu.sup_get(0, 0, 0) == 2 );
@@ -1010,12 +1010,12 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
         std::array<long double, 6> x;
         int flag = ilu.solve(b.data(), x.data());
         REQUIRE( flag == 0 );
-        REQUIRE( block_diag_ilu::absval(x[0] - xref[0]) < 5e-18L );
-        REQUIRE( block_diag_ilu::absval(x[1] - xref[1]) < 5e-18L );
-        REQUIRE( block_diag_ilu::absval(x[2] - xref[2]) < 5e-18L );
-        REQUIRE( block_diag_ilu::absval(x[3] - xref[3]) < 5e-18L );
-        REQUIRE( block_diag_ilu::absval(x[4] - xref[4]) < 5e-18L );
-        REQUIRE( block_diag_ilu::absval(x[5] - xref[5]) < 5e-18L );
+        REQUIRE( std::abs(x[0] - xref[0]) < 5e-18L );
+        REQUIRE( std::abs(x[1] - xref[1]) < 5e-18L );
+        REQUIRE( std::abs(x[2] - xref[2]) < 5e-18L );
+        REQUIRE( std::abs(x[3] - xref[3]) < 5e-18L );
+        REQUIRE( std::abs(x[4] - xref[4]) < 5e-18L );
+        REQUIRE( std::abs(x[5] - xref[5]) < 5e-18L );
     }
 }
 #endif

@@ -1,6 +1,6 @@
 CXX ?= g++
 LIBS ?= -llapack
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -Werror -pedantic -DBLOCK_DIAG_ILU_UNIT_TEST -g -ggdb -O0 -D_GLIBCXX_DEBUG
+CXXFLAGS ?= -std=c++14 -Wall -Wextra -Werror -pedantic -DBLOCK_DIAG_ILU_UNIT_TEST -g -ggdb -O0 -D_GLIBCXX_DEBUG
 CXXFLAGS += $(EXTRA_FLAGS)
 INCLUDE ?= -I../include
 DEFINES ?=

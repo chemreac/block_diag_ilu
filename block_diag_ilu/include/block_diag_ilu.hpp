@@ -7,50 +7,20 @@
 #include <cstdlib> // std::abs for int (must include!!)
 #include <cstring> // memcpy
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 #include <vector>
 #endif
 
 // block_diag_ilu
 // ==============
 // Algorithm: Incomplete LU factorization of block diagonal matrices with weak sub-/super-diagonals
-// Language: C++11
+// Language: C++14
 // License: Open Source, see LICENSE (BSD 2-Clause license)
 // Author: Björn Dahlgren 2015
 // URL: https://github.com/chemreac/block_diag_ilu
 
 
 namespace block_diag_ilu {
-
-    template <typename T> constexpr T absval(T a) {
-        return (a >= 0) ? a : -a;
-    }
-
-    // make_unique<T[]>() only provided in C++14, work around for C++11:
-    // <copy&paste href=http://stackoverflow.com/a/10150181/790973 license=cc-wiki>
-    template <class T, class ...Args>
-    typename std::enable_if
-    <
-        !std::is_array<T>::value,
-        std::unique_ptr<T>
-        >::type
-    make_unique(Args&& ...args)
-    {
-        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-    }
-
-    template <class T>
-    typename std::enable_if
-    <
-        std::is_array<T>::value,
-        std::unique_ptr<T>
-        >::type
-    make_unique(int n)
-    {
-        typedef typename std::remove_extent<T>::type RT;
-        return std::unique_ptr<T>(new RT[n]);
-    }
-    // </copy&paste>
 
     // Let's define an alias template for a buffer type which may
     // use (conditional compilation) either std::unique_ptr or std::vector
@@ -59,12 +29,7 @@ namespace block_diag_ilu {
 #ifdef NDEBUG
     template<typename T> using buffer_t = std::unique_ptr<T[]>;
     template<typename T> using buffer_ptr_t = T*;
-    // For use in C++14:
-    // template<typename T> constexpr auto buffer_factory = make_unique<T>;
-    // Work around in C++11:
-    template<typename T> constexpr buffer_t<T> buffer_factory(int n) {
-        return make_unique<T[]>(n);
-    }
+    template<typename T> constexpr auto buffer_factory = std::make_unique<T[]>;
     template<typename T> constexpr T* buffer_get_raw_ptr(buffer_t<T>& buf) {
         return buf.get();
     }
@@ -125,8 +90,7 @@ namespace block_diag_ilu {
             : blockw(blockw), ndiag(ndiag), nblocks(nblocks),
               nouter(nouter_(blockw, ndiag)), dim(blockw*nblocks) {}
 
-        Real_t get_global(const int rowi,
-                                 const int coli) const noexcept{
+        Real_t get_global(const int rowi, const int coli) const noexcept{
             const auto& self = *static_cast<const T*>(this);  // CRTP
             const int bri = rowi / self.blockw;
             const int bci = coli / self.blockw;
@@ -364,10 +328,10 @@ namespace block_diag_ilu {
                 for (int li = 0; li < this->blockw; ++li){
                     const Real_t diag_val = this->block(bi, li, li);
                     if (bi < this->nblocks - di - 1){
-                        off_diag_factor += block_diag_ilu::absval<Real_t>(diag_val/this->sub(di, bi, li));
+                        off_diag_factor += std::abs(diag_val/this->sub(di, bi, li));
                     }
                     if (bi > di){
-                        off_diag_factor += block_diag_ilu::absval<Real_t>(diag_val/this->sup(di, bi - di - 1, li));
+                        off_diag_factor += std::abs(diag_val/this->sup(di, bi - di - 1, li));
                     }
                 }
             }
@@ -714,10 +678,10 @@ int block_diag_ilu::getrf_square(const int dim, Real_t * const __restrict__ a,
 
     for (int i=0; i<dim-1; ++i) {
         int pivrow = i;
-        Real_t absmax = block_diag_ilu::absval<Real_t>(A(i, i));
+        Real_t absmax = std::abs(A(i, i));
         for (int j=i; j<dim; ++j) {
             // Find pivot
-            Real_t curabs = block_diag_ilu::absval<Real_t>(A(j, i));
+            Real_t curabs = std::abs(A(j, i));
             if (curabs > absmax){
                 absmax = curabs;
                 pivrow = j;
