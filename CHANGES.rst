@@ -1,3 +1,9 @@
+v0.3.0
+======
+- Use int throughout instead of unsigned and size_t.
+- Require C++14
+- Support satellite diagonals (from e.g. MOL with PBC)
+
 v0.2.5
 ======
 - Enhanced conda recipe

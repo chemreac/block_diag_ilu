@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function)
 import os
 import numpy as np
 import scipy.linalg
+import pytest
 
 from .. import (
     Compressed_from_dense, ILU, LU, get_include, Compressed_from_data
@@ -17,12 +18,12 @@ def test_get_include():
 
 def _get_A():
     return np.array([
-        [9, 3, .1, 0, .01, 0],
-        [-4, 18, 0, .5, 0, .02],
-        [.2, 0, 7, -2, 1, 0],
-        [0, -.1, 3, 5, 0, -.1],
-        [.03, 0, .1, 0, -9, 2],
-        [0, .04, 0, .05, -3, 7]
+        [9   , 3   , .1 , 0   , .01 , 0]   ,  # noqa
+        [-4  , 18  , 0  , .5  , 0   , .02] ,  # noqa
+        [.2  , 0   , 7  , -2  , 1   , 0]   ,  # noqa
+        [0   , -.1 , 3  , 5   , 0   , -.1] ,  # noqa
+        [.03 , 0   , .1 , 0   , -9  , 2]   ,  # noqa
+        [0   , .04 , 0  , .05 , -3  , 7]      # noqa
     ])
 
 
@@ -46,15 +47,77 @@ def test_Compressed_from_data():
 
 
 def test_Compressed_from_dense():
-    b = np.array([-7, 3, 5, -4, 6, 1.5])
-    lu, piv = scipy.linalg.lu_factor(_get_A())
-    x = scipy.linalg.lu_solve((lu, piv), b)
+    A = _get_A()
 
-    cmprs = Compressed_from_dense(_get_A(), 3, 2, 2)
+    cmprs = Compressed_from_dense(A, 3, 2, 2)
+    assert np.allclose(cmprs.to_dense(), A)
     ilu = ILU(cmprs)
+    b = np.array([-7, 3, 5, -4, 6, 1.5])
     ix = ilu.solve(b)
+    x = scipy.linalg.lu_solve(scipy.linalg.lu_factor(A), b)
     assert np.allclose(x, ix, rtol=0.05, atol=1e-6)
     assert np.allclose(x, LU(cmprs).solve(b))
+
+
+def test_Compressed_from_dense_sattelites():
+    cmprs = Compressed_from_dense(_get_A(), 3, 2, 0, 2)
+    assert cmprs.nsat == 2
+    assert cmprs.get_sat(1, 0, 0) == 0.01
+    assert cmprs.get_sat(1, 0, 1) == 0.02
+    assert cmprs.get_sat(2, 0, 0) == 0.1
+    assert cmprs.get_sat(2, 0, 1) == 0.5
+    assert cmprs.get_sat(2, 1, 0) == 1
+    assert cmprs.get_sat(2, 1, 1) == -.1
+    assert cmprs.get_sat(-1, 0, 0) == 0.03
+    assert cmprs.get_sat(-1, 0, 1) == 0.04
+    assert cmprs.get_sat(-2, 0, 0) == .2
+    assert cmprs.get_sat(-2, 0, 1) == -.1
+    assert cmprs.get_sat(-2, 1, 0) == .1
+    assert cmprs.get_sat(-2, 1, 1) == 0.05
+
+
+@pytest.mark.parametrize("sat", [True, False])
+def test_Compressed_scale_diag_add(sat):
+    scale = 5
+    ndiag, nsat = (0, 2) if sat else (2, 0)
+    A = _get_A()
+    cmprs1 = Compressed_from_dense(A, 3, 2, ndiag, nsat)
+    cmprs2 = Compressed_from_dense(A, 3, 2, ndiag, nsat)
+    cmprs2.scale_diag_add(cmprs1, scale, 0)
+    v = np.array([3, -2, 1, 5, 7, -6], dtype=np.float64)
+    result = cmprs2.dot_vec(v)
+    ref = A.dot(v)
+    assert np.allclose(scale*ref, result)
+
+
+def test_ILU_solve__sattelites():
+    A = _get_A()
+    cmprs = Compressed_from_dense(A, 3, 2, 0, 2)
+    ilu = ILU(cmprs)
+    b = np.array([-7, 3, 5, -4, 6, 1.5])
+    ilux = ilu.solve(b)
+    ref = scipy.linalg.lu_solve(scipy.linalg.lu_factor(A), b)
+    assert np.allclose(ref, ilux, rtol=0.05, atol=1e-6)
+
+
+
+def test_Compressed_dot_vec():
+    cmprs = Compressed_from_data(_get_A_data(), 3, 2, 2)
+    A = _get_A()
+    v = np.array([3, -2, 1, 5, 7, -6], dtype=np.float64)
+    result = cmprs.dot_vec(v)
+    ref = A.dot(v)
+    assert np.allclose(ref, result)
+
+
+def test_Compressed_dot_vec__sattelites():
+    cmprs = Compressed_from_dense(_get_A(), 3, 2, 0, 2)
+    A = _get_A()
+    v = np.array([3, -2, 1, 5, 7, -6], dtype=np.float64)
+    result = cmprs.dot_vec(v)
+    ref = A.dot(v)
+    assert np.allclose(ref, result)
+
 
 
 def _get_test_m1():
@@ -133,9 +196,9 @@ def _get_test_m4():
     return A, ref, pivref
 
 
-def FakeLU(A, n, ndiag=0):
+def FakeLU(A, n, ndiag=0, nsat=0):
     N = A.shape[0]//n
-    cmprs = Compressed_from_dense(np.asarray(A, dtype=np.float64), N, n, ndiag)
+    cmprs = Compressed_from_dense(np.asarray(A, dtype=np.float64), N, n, ndiag, nsat)
     return ILU(cmprs)
 
 
@@ -148,15 +211,16 @@ def test_ilu_solve__1():
     assert np.allclose(x, xref)
 
 
-def test_FakeLU_solve_2():
+@pytest.mark.parametrize("sat", [True, False])
+def test_FakeLU_solve_2(sat):
     A2, ref2 = _get_test_m2()
-    fLU2 = FakeLU(A2, 2, 1)
+    fLU2 = FakeLU(A2, 2, 0, 2) if sat else FakeLU(A2, 2, 1)
     b = np.array([65, 202, 11, 65, 60, 121], dtype=np.float64)
     # scipy.linalg.lu_solve(scipy.linalg.lu_factor(A2), b) gives xtrue:
     xtrue = [11, 12, -13, 17, 9, 5]
 
     # but here we verify the errornous result `xref` from the incomplete LU
-    # factorization of A2 which is only midly diagonally dominant:
+    # factorization of A2 which is only mildly diagonally dominant:
     # LUx = b
     # Ly = b
     yref = [b[0]]
@@ -178,9 +242,10 @@ def test_FakeLU_solve_2():
     assert not np.allclose(xtrue, x)  # <-- shows that the error is intentional
 
 
-def test_FakeLU_solve_3():
+@pytest.mark.parametrize("sat", [True, False])
+def test_FakeLU_solve_3(sat):
     A3, ref3, pivref3 = _get_test_m3()
-    fLU3 = FakeLU(A3, 2, 1)
+    fLU3 = FakeLU(A3, 2, 0, 1) if sat else FakeLU(A3, 2, 1)
 
     b = np.array([-62, 207, 11, -14], dtype=np.float64)
     xtrue = scipy.linalg.lu_solve(scipy.linalg.lu_factor(A3), b.copy())
@@ -203,9 +268,10 @@ def test_FakeLU_solve_3():
     assert np.allclose(xtrue, x, rtol=0.01, atol=1e-6)
 
 
-def test_FakeLU_solve_4():
+@pytest.mark.parametrize("nsat", [0, 1, 2])
+def test_FakeLU_solve_4(nsat):
     A4, ref4, pivref4 = _get_test_m4()
-    fLU4 = FakeLU(A4, 2, 2)
+    fLU4 = FakeLU(A4, 2, 2-nsat, nsat)
 
     b = np.array([-62, 207, 11, -14, 25, -167], dtype=np.float64)
     xtrue = scipy.linalg.lu_solve(scipy.linalg.lu_factor(A4), b.copy())

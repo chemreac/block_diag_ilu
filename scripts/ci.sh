@@ -3,18 +3,24 @@ if ! [[ $(python setup.py --version) =~ ^[0-9]+.* ]]; then
     exit 1
 fi
 
-cd tests
-make
-make clean; make DEFINES=-DBLOCK_DIAG_ILU_WITH_DGETRF EXTRA_FLAGS="-fopenmp"
-make clean; make DEFINES=-DNDEBUG
-make clean; make CXX=clang++-3.8
+(
+    cd tests
+    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-3.8/bin/llvm-symbolizer
+    export ASAN_OPTIONS=symbolize=1
+    make clean; make CXX=clang++-3.8 EXTRA_FLAGS="-fsanitize=address"
+    make clean; make DEFINES=-D_GLIBCXX_DEBUG
+    make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_DGETRF"
+    make clean; make test_block_diag_ilu_omp
+    BLOCK_DIAG_ILU_NUM_THREADS=2 ./test_block_diag_ilu_omp --abortx 1
+)
 
-cd ..
-python2.7 setup.py sdist
-for PYTHON in python2.7 python3; do
-    (cd dist/; $PYTHON -m pip install $1-$($PYTHON ../setup.py --version).tar.gz)
-    (cd /; $PYTHON -m pytest --pyargs $1)
-done
+python3 setup.py sdist
+VERSION=$(python3 setup.py --version)
+(cd dist/; python2 -m pip install $1-$VERSION.tar.gz)
+(cd /; python2 -m pytest --pyargs $1)
+(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install $1-$VERSION.tar.gz)
+(cd /; BLOCK_DIAG_ILU_NUM_THREADS=2 python3 -m pytest --pyargs $1)
+
 
 (
     cd python_prototype
@@ -54,6 +60,15 @@ from block_diag_ilu import get_include as gi
 import os
 assert "block_diag_ilu.pxd" in os.listdir(gi())
 '
+)
+
+(
+    cd scripts/
+    python3 generate_infographics.py --ndiag 3 --N 15
+    python3 generate_infographics.py --savefig periodic -p --ndiag 3 --N 15
+    python3 generate_infographics.py --savefig interpolating -i --ndiag 3 --N 15
+    mkdir -p ../deploy/public_html/branches/"${CI_BRANCH}"/
+    cp *.png ../deploy/public_html/branches/"${CI_BRANCH}"/
 )
 
 if grep "DO-NOT-MERGE!" -R . --exclude ci.sh; then exit 1; fi

@@ -8,10 +8,11 @@ def diag_data_len(N, n, ndiag):
     return n*(N*ndiag - ((ndiag+1)*(ndiag+1) - (ndiag+1))//2)
 
 
-def alloc_compressed(nblocks, blockw, ndiag):
+def alloc_compressed(nblocks, blockw, ndiag, nsat):
     n_block_elem = blockw*blockw*nblocks
     n_diag_elem = 2*diag_data_len(nblocks, blockw, ndiag)
-    return np.zeros(n_block_elem + n_diag_elem)
+    n_sat_elem = (nsat*nsat + nsat)*blockw
+    return np.zeros(n_block_elem + n_diag_elem + n_sat_elem)
 
 
 def get_compressed(A, N, n, ndiag, cmaj=True):
