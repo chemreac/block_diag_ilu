@@ -79,7 +79,7 @@ namespace block_diag_ilu {
         for (int i=0; i<n; ++i)
             if (std::isnan(arr[i]))
                 return i+1;
-        return 0; // if no NaN is encountered, -0is returned
+        return 0; // if no NaN is encountered, 0 is returned
     }
 
     template <class T, typename Real_t = double>
@@ -182,6 +182,19 @@ namespace block_diag_ilu {
             const int imaj = (this->m_blockw)*(blocki + (col_maj ? diagi + 1 : 0)) + li;
             const int imin = (this->m_blockw)*(blocki + (col_maj ? 0 : diagi + 1)) + li;
             return m_data[imaj*m_ld + imin];
+        }
+        Real_t& sat(const int sati, const int blocki, const int li) const noexcept { // no error checking
+            int ri, ci;
+            const int nblk = this->m_nblocks;
+            const int blkw = this->m_blockw;
+            if (sati > 0){
+                ri = blocki*blkw + li;
+                ci = (nblk+blocki - sati)*blkw + li;
+            } else{
+                ri = (nblk+blocki + sati)*blkw + li;
+                ci = blocki*blkw + li;
+            }
+            return m_data[col_maj ? ri + ci*m_ld : ri*m_ld + ci];
         }
     };
 
@@ -559,11 +572,7 @@ namespace block_diag_ilu {
         }
         for (int i=0; i<n; ++i){
             int j = piv[i] - 1; // Fortran indexing starts with 1
-            if (i != j){
-                int tmp = rowbycol[j];
-                rowbycol[j] = rowbycol[i];
-                rowbycol[i] = tmp;
-            }
+            std::swap(rowbycol[i], rowbycol[j]);
         }
     }
 

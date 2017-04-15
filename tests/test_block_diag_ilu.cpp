@@ -935,6 +935,20 @@ TEST_CASE( "block_sub_sup", "[DenseView]" ) {
     REQUIRE( cmdv.sub(1, 0, 0) == 8 );
     REQUIRE( cmdv.sub(1, 0, 1) == 3 );
 
+    REQUIRE( cmdv.sat(-1, 0, 0) == 8 );
+    REQUIRE( cmdv.sat(-1, 0, 1) == 3 );
+    REQUIRE( cmdv.sat(-2, 0, 0) == 9 );
+    REQUIRE( cmdv.sat(-2, 0, 1) == 4 );
+    REQUIRE( cmdv.sat(-2, 1, 0) == 9 );
+    REQUIRE( cmdv.sat(-2, 1, 1) == 4 );
+
+    REQUIRE( cmdv.sat(1, 0, 0) == 4 );
+    REQUIRE( cmdv.sat(1, 0, 1) == 8 );
+    REQUIRE( cmdv.sat(2, 0, 0) == 3 );
+    REQUIRE( cmdv.sat(2, 0, 1) == 7 );
+    REQUIRE( cmdv.sat(2, 1, 0) == 3 );
+    REQUIRE( cmdv.sat(2, 1, 1) == 7 );
+
     std::array<double, 36> rarr {{
             1, 2, 3, 0, 4, 0,
                 5, 6, 0, 7, 0, 8,
