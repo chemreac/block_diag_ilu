@@ -2,61 +2,26 @@
 #include <algorithm> // std::max
 #include <type_traits>
 #include <utility>
-#include <memory>
 #include <cmath> // std::abs for float and double, std::sqrt, std::isnan
 #include <cstdlib> // std::abs for int (must include!!)
-#include <cstring> // memcpy
 
-#if !defined(NDEBUG)
-#include <vector>
+#include <anyode/anyode_buffer.hpp>
+#include <anyode/anyode_blas_lapack.hpp>
+
+#if defined(BLOCK_DIAG_ILU_WITH_DGETRF)
+#include <anyode/anyode_blas_lapack.hpp>
 #endif
-
-// block_diag_ilu
-// ==============
-// Algorithm: Incomplete LU factorization of block diagonal matrices with weak sub-/super-diagonals
-// Language: C++14
-// License: Open Source, see LICENSE (BSD 2-Clause license)
-// Author: Björn Dahlgren 2015
-// URL: https://github.com/chemreac/block_diag_ilu
-
 
 namespace block_diag_ilu {
-
-    // Let's define an alias template for a buffer type which may
-    // use (conditional compilation) either std::unique_ptr or std::vector
-    // as underlying data structure.
-
-#ifdef NDEBUG
-    template<typename T> using buffer_t = std::unique_ptr<T[]>;
-    template<typename T> using buffer_ptr_t = T*;
-    template<typename T> constexpr auto buffer_factory = std::make_unique<T[]>;
-    template<typename T> constexpr T* buffer_get_raw_ptr(buffer_t<T>& buf) {
-        return buf.get();
-    }
-#else
-    template<typename T> using buffer_t = std::vector<T>;
-    template<typename T> using buffer_ptr_t = T*;
-    template<typename T> constexpr buffer_t<T> buffer_factory(int n) {
-        return buffer_t<T>(n);
-    }
-    template<typename T> constexpr T* buffer_get_raw_ptr(buffer_t<T>& buf) {
-        return &buf[0];
-    }
-#endif
+    using AnyODE::buffer_t;
+    using AnyODE::buffer_ptr_t;
+    using AnyODE::buffer_factory;
+    using AnyODE::buffer_get_raw_ptr;
 
 #if defined(BLOCK_DIAG_ILU_WITH_DGETRF)
     template<typename T> int getrf_square(const int dim, T * const __restrict__ a,
                                           const int lda, int * const __restrict__ ipiv) noexcept;
-#else
-    extern "C" void dgetrf_(const int* dim1, const int* dim2, double* a, int* lda, int* ipiv, int* info);
 #endif
-
-    extern "C" void dgbtrf_(const int *nrows, const int* ncols, const int* nsub,
-                            const int *nsup, double *ab, const int *ldab, int *ipiv, int *info);
-
-    extern "C" void dgbtrs_(const char *trans, const int *dim, const int* nsub,
-                            const int *nsup, const int *nrhs, const double *ab,
-                            const int *ldab, const int *ipiv, double *b, const int *ldb, int *info);
 
     constexpr int nouter_(int blockw, int ndiag) { return (ndiag == 0) ? blockw-1 : blockw*ndiag; }
     constexpr int banded_ld_(int nouter, int offset=-1) {
@@ -149,88 +114,6 @@ namespace block_diag_ilu {
             self.sat(sati, blocki, coli) = value;
         }
 #endif
-    };
-
-
-
-    template <typename Real_t = double, bool col_maj = true>
-    class DenseView : public ViewBase<DenseView<Real_t, col_maj>, Real_t> {
-        // For use with LAPACK's dense matrix layout
-    public:
-        Real_t *m_data;
-        const int m_ld;
-
-        DenseView(Real_t *data, const int nblocks, const int blockw, const int ndiag, const int ld_=0)
-            : ViewBase<DenseView<Real_t, col_maj>, Real_t>(blockw, ndiag, nblocks),
-            m_data(data),
-            m_ld((ld_ == 0) ? blockw*nblocks : ld_)
-        {}
-        Real_t& block(const int blocki, const int rowi,
-                             const int coli) const noexcept {
-            const int imaj = this->m_blockw*blocki + (col_maj ? coli : rowi);
-            const int imin = this->m_blockw*blocki + (col_maj ? rowi : coli);
-            return m_data[imaj*m_ld + imin];
-        }
-        Real_t& sub(const int diagi, const int blocki,
-                           const int li) const noexcept {
-            const int imaj = (this->m_blockw)*(blocki + (col_maj ? 0 : diagi + 1)) + li;
-            const int imin = (this->m_blockw)*(blocki + (col_maj ? diagi + 1 : 0)) + li;
-            return m_data[imaj*m_ld + imin];
-        }
-        Real_t& sup(const int diagi, const int blocki,
-                           const int li) const noexcept {
-            const int imaj = (this->m_blockw)*(blocki + (col_maj ? diagi + 1 : 0)) + li;
-            const int imin = (this->m_blockw)*(blocki + (col_maj ? 0 : diagi + 1)) + li;
-            return m_data[imaj*m_ld + imin];
-        }
-        Real_t& sat(const int sati, const int blocki, const int li) const noexcept { // no error checking
-            int ri, ci;
-            const int nblk = this->m_nblocks;
-            const int blkw = this->m_blockw;
-            if (sati > 0){
-                ri = blocki*blkw + li;
-                ci = (nblk+blocki - sati)*blkw + li;
-            } else{
-                ri = (nblk+blocki + sati)*blkw + li;
-                ci = blocki*blkw + li;
-            }
-            return m_data[col_maj ? ri + ci*m_ld : ri*m_ld + ci];
-        }
-    };
-
-    template <typename Real_t = double>
-    class ColMajBandedView : public ViewBase<ColMajBandedView<Real_t>, Real_t> {
-        // For use with LAPACK's banded matrix layout.
-        // Note that the matrix is padded with ``mlower`` extra bands.
-    public:
-        Real_t *m_data;
-        const int m_ld, m_offset;
-
-        ColMajBandedView(Real_t *data, const int nblocks, const int blockw, const int ndiag,
-                         const int ld=0, int offset=-1)
-            : ViewBase<ColMajBandedView<Real_t>, Real_t>(blockw, ndiag, nblocks),
-            m_data(data),
-            m_ld((ld == 0) ? banded_ld_(nouter_(blockw, ndiag), offset) : ld),
-            m_offset((offset == -1) ? nouter_(blockw, ndiag) : offset)
-        {}
-        Real_t& block(const int blocki, const int rowi,
-                             const int coli) const noexcept {
-            const int imaj = blocki*(this->m_blockw) + coli;
-            const int imin = m_offset + (this->m_nouter) + rowi - coli;
-            return m_data[imaj*m_ld + imin];
-        }
-        Real_t& sub(const int diagi, const int blocki,
-                           const int coli) const noexcept {
-            const int imaj = blocki*(this->m_blockw) + coli;
-            const int imin = m_offset + (this->m_nouter) + (diagi + 1)*(this->m_blockw);
-            return m_data[imaj*m_ld + imin];
-        }
-        Real_t& sup(const int diagi, const int blocki,
-                           const int coli) const noexcept {
-            const int imaj = (blocki + diagi + 1)*(this->m_blockw) + coli;
-            const int imin = m_offset + (this->m_nouter) - (diagi+1)*(this->m_blockw);
-            return m_data[imaj*m_ld + imin];
-        }
     };
 
     template <typename Real_t = double> class ColMajBlockDiagMat;
@@ -467,58 +350,6 @@ namespace block_diag_ilu {
         }
     };
 
-    template <typename Real_t = double> class LU {  // Wrapper around DGBTRF & DGBTRS from LAPACK
-        static_assert(sizeof(Real_t) == 8, "LAPACK DGBTRF & DGBTRS operates on 64-bit IEEE 754 floats.");
-#ifdef BLOCK_DIAG_ILU_UNIT_TEST
-    public:
-#endif
-        const int m_dim, m_nouter, m_ld;
-        buffer_t<Real_t> m_data;
-        buffer_t<int> m_ipiv;
-    public:
-        LU(const ColMajBlockDiagView<Real_t>& view) :
-            m_dim(view.m_dim),
-            m_nouter(view.m_nouter),
-            m_ld(view.get_banded_ld()),
-            m_data(view.to_banded()),
-            m_ipiv(buffer_factory<int>(view.m_dim))
-        {
-            factorize();
-        }
-        LU(const ColMajBandedView<Real_t>& view) :
-            m_dim(view.m_dim),
-            m_nouter(view.m_nouter),
-            m_ld(view.m_ld),
-            m_data(buffer_factory<Real_t>(view.m_ld*view.m_dim)),
-            m_ipiv(buffer_factory<int>(view.m_dim))
-        {
-            std::memcpy(&m_data[0], this->m_view.m_data, sizeof(Real_t) * m_ld * m_dim);
-            if (m_ld != banded_ld_(view.m_nouter)){
-                throw std::runtime_error("LAPACK requires padding");
-            }
-            factorize();
-        }
-        void factorize(){
-            int info;
-            dgbtrf_(&m_dim, &m_dim, &m_nouter, &m_nouter,
-                    buffer_get_raw_ptr(m_data),
-                    &m_ld,
-                    buffer_get_raw_ptr(m_ipiv), &info);
-            if (info){
-                throw std::runtime_error("DGBTRF failed.");
-            }
-        }
-        int solve(const Real_t * const __restrict__ b, Real_t * const __restrict__ x){
-            const char trans = 'N'; // no transpose
-            std::memcpy(x, b, sizeof(Real_t)*m_dim);
-            int info, nrhs=1;
-            dgbtrs_(&trans, &m_dim, &m_nouter, &m_nouter, &nrhs,
-                    buffer_get_raw_ptr(m_data), &m_ld,
-                    buffer_get_raw_ptr(m_ipiv), x, &m_dim, &info);
-            return info;
-        };
-    };
-
     template <typename Real_t> class ColMajBlockDiagMat {
         buffer_t<Real_t> m_block_data, m_sub_data, m_sup_data, m_sat_data;
     public:
@@ -641,12 +472,13 @@ namespace block_diag_ilu {
 #else
                 static_assert(sizeof(Real_t) == 8, "LAPACK dgetrf operates on 64-bit IEEE 754 floats.");
                 int info;
-                dgetrf_(&blockw,
-                        &blockw,
-                        &(m_view.block(bi, 0, 0)),
-                        &(ld_blocks),
-                        &(m_ipiv[bi*blockw]),
-                        &info);
+                constexpr AnyODE::getrf_callback<Real_t> getrf{};
+                getrf(&blockw,
+                      &blockw,
+                      &(m_view.block(bi, 0, 0)),
+                      &(ld_blocks),
+                      &(m_ipiv[bi*blockw]),
+                      &info);
 #endif
                 if ((info != 0) and (info_ == 0))
                     info_ = info;

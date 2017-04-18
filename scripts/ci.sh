@@ -2,7 +2,7 @@
 if ! [[ $(python setup.py --version) =~ ^[0-9]+.* ]]; then
     exit 1
 fi
-
+./scripts/get_external.sh
 (
     cd tests
     export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-3.8/bin/llvm-symbolizer
