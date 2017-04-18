@@ -25,8 +25,6 @@ VERSION=$(python3 setup.py --version)
 (
     cd python_prototype
     PYTHONPATH=$(pwd) python -m pytest
-    export NP_INC=$(python -c "import numpy; print(numpy.get_include())")
-    echo $NP_INC
     python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py

@@ -44,10 +44,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
     print(ext_modules)
     if USE_CYTHON:
         from Cython.Build import cythonize
-        ext_modules = cythonize(ext_modules, include_path=[
-            package_include,
-            os.path.join('external', 'anyode', 'cython_def')
-        ])
+        ext_modules = cythonize(ext_modules, include_path=[package_include])
     print(ext_modules)
     macros = [('BLOCK_DIAG_ILU_PY', None)]
     if env.get('BLOCK_DIAG_ILU_WITH_DGETRF') == '1':
