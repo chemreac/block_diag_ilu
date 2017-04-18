@@ -22,6 +22,8 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         int solve(T *, T *)
         ILU_inplace m_ilu_inplace
 
+
+cdef extern from "block_diag_ilu/banded.hpp" namespace "block_diag_ilu":
     cdef cppclass LU[T]:
         LU(ColMajBlockDiagView[T])
         int solve(T *, T *)
