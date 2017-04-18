@@ -13,6 +13,7 @@ COMMON_DEP := ../include/block_diag_ilu.hpp catch.hpp
 test: test_block_diag test_banded test_dense
 	./test_block_diag --abortx 1
 	./test_banded --abortx 1
+	./test_dense --abortx 1
 
 clean:
 	rm -f catch.hpp

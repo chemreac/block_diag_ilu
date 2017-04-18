@@ -43,7 +43,7 @@ namespace block_diag_ilu {
 #ifdef BLOCK_DIAG_ILU_UNIT_TEST
     public:
 #endif
-        const int m_dim, m_nouter, m_ld;
+        int m_dim, m_nouter, m_ld;
         buffer_t<Real_t> m_data;
         buffer_t<int> m_ipiv;
     public:
@@ -73,9 +73,9 @@ namespace block_diag_ilu {
             int info;
             constexpr AnyODE::gbtrf_callback<Real_t> gbtrf{};
             gbtrf(&m_dim, &m_dim, &m_nouter, &m_nouter,
-                    buffer_get_raw_ptr(m_data),
-                    &m_ld,
-                    buffer_get_raw_ptr(m_ipiv), &info);
+                  buffer_get_raw_ptr(m_data),
+                  &m_ld,
+                  buffer_get_raw_ptr(m_ipiv), &info);
             if (info){
                 throw std::runtime_error("DGBTRF failed.");
             }
@@ -86,8 +86,8 @@ namespace block_diag_ilu {
             int info, nrhs=1;
             constexpr AnyODE::gbtrs_callback<Real_t> gbtrs{};
             gbtrs(&trans, &m_dim, &m_nouter, &m_nouter, &nrhs,
-                    buffer_get_raw_ptr(m_data), &m_ld,
-                    buffer_get_raw_ptr(m_ipiv), x, &m_dim, &info);
+                  buffer_get_raw_ptr(m_data), &m_ld,
+                  buffer_get_raw_ptr(m_ipiv), x, &m_dim, &info);
             return info;
         };
     };

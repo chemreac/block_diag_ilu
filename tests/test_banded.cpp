@@ -2,6 +2,7 @@
 #define CATCH_CONFIG_MAIN  // This tells Catch to provide a main()
 #include "catch.hpp"
 #include "block_diag_ilu.hpp"
+#include "block_diag_ilu/banded.hpp"
 #include <array>
 #include <cmath>
 

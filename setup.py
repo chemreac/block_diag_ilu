@@ -44,7 +44,10 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
     print(ext_modules)
     if USE_CYTHON:
         from Cython.Build import cythonize
-        ext_modules = cythonize(ext_modules, include_path=[package_include])
+        ext_modules = cythonize(ext_modules, include_path=[
+            package_include,
+            os.path.join('external', 'anyode', 'cython_def')
+        ])
     print(ext_modules)
     macros = [('BLOCK_DIAG_ILU_PY', None)]
     if env.get('BLOCK_DIAG_ILU_WITH_DGETRF') == '1':
@@ -53,7 +56,11 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         macros.append(('BLOCK_DIAG_ILU_WITH_OPENMP', None))
     ext_modules[0].language = 'c++'
     ext_modules[0].extra_compile_args = ['-std=c++14']
-    ext_modules[0].include_dirs = [np.get_include(), package_include]
+    ext_modules[0].include_dirs = [
+        np.get_include(),
+        package_include,
+        os.path.join('external', 'anyode', 'include')
+    ]
     ext_modules[0].define_macros += macros
     ext_modules[0].libraries += [env['LAPACK']]
 
