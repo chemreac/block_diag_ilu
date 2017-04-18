@@ -737,7 +737,7 @@ namespace block_diag_ilu {
 // int will be enough (flops of a LU decomoposition scales as N**3, and besides this is unblocked)
 template <typename Real_t = double>
 int block_diag_ilu::getrf_square(const int dim, Real_t * const __restrict__ a,
-                                          const int lda, int * const __restrict__ ipiv) noexcept {
+                                 const int lda, int * const __restrict__ ipiv) noexcept {
     // Unblocked algorithm for LU decomposition of square matrices
     // employing Doolittle's algorithm with rowswaps.
     //
@@ -750,11 +750,8 @@ int block_diag_ilu::getrf_square(const int dim, Real_t * const __restrict__ a,
     int info = 0;
     auto A = [&](int ri, int ci) -> Real_t& { return a[ci*lda + ri]; };
     auto swaprows = [&](int ri1, int ri2) { // this is not cache friendly
-        for (int ci=0; ci<dim; ++ci){
-            Real_t temp = A(ri1, ci);
-            A(ri1, ci) = A(ri2, ci);
-            A(ri2, ci) = temp;
-        }
+        for (int ci=0; ci<dim; ++ci)
+            std::swap(A(ri1, ci), A(ri2, ci));
     };
 
     for (int i=0; i<dim-1; ++i) {
@@ -777,7 +774,7 @@ int block_diag_ilu::getrf_square(const int dim, Real_t * const __restrict__ a,
         }
         // Eliminate in column
         for (int ri=i+1; ri<dim; ++ri){
-            A(ri, i) = A(ri, i)/A(i, i);
+            A(ri, i) /= A(i, i);
         }
         // Subtract from rows
         for (int ci=i+1; ci<dim; ++ci){
