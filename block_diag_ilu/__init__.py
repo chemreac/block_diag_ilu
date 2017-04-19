@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-block_diag_ilu is a C++ implementation of an incomplete LU factorization.
+block_diag_ilu is a C++ implementation of an incomplete LU factorization, ILU(0).
 """
 
 from __future__ import (absolute_import, division, print_function)

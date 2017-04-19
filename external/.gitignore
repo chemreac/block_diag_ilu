@@ -1,1 +1,5 @@
-*/
+**.*
+*/LICENSE
+*/tests
+!anyode/include/anyode/anyode_buffer.hpp
+!anyode/include/anyode/anyode_blas_lapack.hpp
