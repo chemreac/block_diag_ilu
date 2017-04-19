@@ -62,18 +62,18 @@ def test_Compressed_from_dense():
 def test_Compressed_from_dense_sattelites():
     cmprs = Compressed_from_dense(_get_A(), 3, 2, 0, 2)
     assert cmprs.nsat == 2
-    assert cmprs.get_sat(1, 0, 0) == 0.01
-    assert cmprs.get_sat(1, 0, 1) == 0.02
-    assert cmprs.get_sat(2, 0, 0) == 0.1
-    assert cmprs.get_sat(2, 0, 1) == 0.5
-    assert cmprs.get_sat(2, 1, 0) == 1
-    assert cmprs.get_sat(2, 1, 1) == -.1
-    assert cmprs.get_sat(-1, 0, 0) == 0.03
-    assert cmprs.get_sat(-1, 0, 1) == 0.04
-    assert cmprs.get_sat(-2, 0, 0) == .2
-    assert cmprs.get_sat(-2, 0, 1) == -.1
-    assert cmprs.get_sat(-2, 1, 0) == .1
-    assert cmprs.get_sat(-2, 1, 1) == 0.05
+    assert cmprs.get_top(0, 0, 0) == 0.01
+    assert cmprs.get_top(0, 0, 1) == 0.02
+    assert cmprs.get_top(1, 0, 0) == 0.1
+    assert cmprs.get_top(1, 0, 1) == 0.5
+    assert cmprs.get_top(1, 1, 0) == 1
+    assert cmprs.get_top(1, 1, 1) == -.1
+    assert cmprs.get_bot(0, 0, 0) == 0.03
+    assert cmprs.get_bot(0, 0, 1) == 0.04
+    assert cmprs.get_bot(1, 0, 0) == .2
+    assert cmprs.get_bot(1, 0, 1) == -.1
+    assert cmprs.get_bot(1, 1, 0) == .1
+    assert cmprs.get_bot(1, 1, 1) == 0.05
 
 
 @pytest.mark.parametrize("sat", [True, False])

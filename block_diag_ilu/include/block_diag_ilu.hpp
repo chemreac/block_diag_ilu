@@ -72,7 +72,7 @@ namespace block_diag_ilu {
             if (bri > bci){ // sub diagonal
                 if (bri - bci > m_ndiag){
                     if (self.m_nblocks - bri + bci <= self.m_nsat)
-                        return self.sat(-self.m_nblocks + bri - bci, bci, lci);
+                        return self.bot(self.m_nblocks - 1 - bri + bci, bci, lci);
                     else
                         return 0.0;
                 } else{
@@ -81,7 +81,7 @@ namespace block_diag_ilu {
             } else { // super diagonal
                 if (bci - bri > m_ndiag){
                     if (self.m_nblocks - bci + bri <= self.m_nsat)
-                        return self.sat(self.m_nblocks - bci + bri, bri, lri);
+                        return self.top(self.m_nblocks - bci + bri - 1, bri, lri);
                     return 0.0;
                 } else {
                     return self.sup(bci-bri-1, bri, lri);
@@ -113,6 +113,17 @@ namespace block_diag_ilu {
             const auto& self = *static_cast<const T*>(this);  // CRTP
             self.sat(sati, blocki, coli) = value;
         }
+        void set_bot(const int sati, const int blocki,
+                     const int coli, Real_t value) const noexcept {
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            self.bot(sati, blocki, coli) = value;
+        }
+        void set_top(const int sati, const int blocki,
+                     const int coli, Real_t value) const noexcept {
+            const auto& self = *static_cast<const T*>(this);  // CRTP
+            self.top(sati, blocki, coli) = value;
+        }
+
 #endif
     };
 
@@ -163,17 +174,20 @@ namespace block_diag_ilu {
         Real_t& sup(const int diagi, const int blocki, const int coli) const noexcept {
             return m_sup_data[diag_idx(diagi, blocki, coli)];
         }
-        Real_t& sat(const int sati, const int blocki, const int coli) const {
-            if ((sati == 0) or (sati < -m_nsat) or (sati > m_nsat)){
-                throw std::runtime_error("invalid sati");
-            }
-            int skip;
-            if (sati > 0){
-                skip = ((m_nsat*m_nsat+m_nsat) + (sati*sati - sati))/2;
-            } else {
-                skip = (sati*sati + sati)/2;
-            }
+        Real_t& bot(const int diagi, const int blocki, const int coli) const noexcept {
+            const int skip = (diagi*diagi + diagi)/2;
             return m_sat_data[(skip+blocki)*this->m_blockw + coli];
+        }
+        Real_t& top(const int diagi, const int blocki, const int coli) const noexcept {
+            const int skip = (m_nsat*m_nsat + m_nsat + diagi*diagi + diagi)/2;
+            return m_sat_data[(skip+blocki)*this->m_blockw + coli];
+        }
+        Real_t& sat(const int sati, const int blocki, const int coli) const noexcept {
+            if (sati > 0){
+                return top(sati-1, blocki, coli);
+            } else {
+                return bot(-sati-1, blocki, coli);
+            }
         }
         void scale_diag_add(const ColMajBlockDiagView<Real_t>& source, Real_t scale=1, Real_t diag_add=0){
             const auto nblocks = (this->m_nblocks);
@@ -201,8 +215,8 @@ namespace block_diag_ilu {
             for (int sati=0; sati < m_nsat; ++sati){
                 for (int bi=0; bi <= sati; ++bi){
                     for (int ci = 0; ci < blockw; ++ci){
-                        this->sat(sati + 1, bi, ci) = scale * source.sat(sati + 1, bi, ci);
-                        this->sat(-sati - 1, bi, ci) = scale * source.sat(-sati - 1, bi, ci);
+                        this->top(sati, bi, ci) = scale * source.top(sati, bi, ci);
+                        this->bot(sati, bi, ci) = scale * source.bot(sati, bi, ci);
                     }
                 }
             }
@@ -248,8 +262,8 @@ namespace block_diag_ilu {
             for (int sati=0; sati<m_nsat; ++sati){
                 for (int bi=0; bi<=sati; ++bi){
                     for (int ci=0; ci<blkw; ++ci){
-                        out[bi*blkw + ci] += this->sat(sati+1, bi, ci)*vec[(nblk-1-sati+bi)*blkw + ci];
-                        out[(nblk-1-sati+bi)*blkw + ci] += this->sat(-sati-1, bi, ci)*vec[bi*blkw + ci];
+                        out[bi*blkw + ci] += this->top(sati, bi, ci)*vec[(nblk-1-sati+bi)*blkw + ci];
+                        out[(nblk-1-sati+bi)*blkw + ci] += this->bot(sati, bi, ci)*vec[bi*blkw + ci];
                     }
                 }
             }
@@ -490,7 +504,7 @@ namespace block_diag_ilu {
                 if (bi < m_view.m_nsat)
                     for (int sati=bi; sati < m_view.m_nsat; ++sati)
                         for (int ci=0; ci < blockw; ++ci)
-                            m_view.sat(-sati-1, bi, ci) /= m_view.block(bi, ci, ci);
+                            m_view.bot(sati, bi, ci) /= m_view.block(bi, ci, ci);
                 rowpiv2rowbycol(blockw, &m_ipiv[bi*blockw], &m_rowbycol[bi*blockw]);
                 rowbycol2colbyrow(blockw, &m_rowbycol[bi*blockw], &m_colbyrow[bi*blockw]);
             }
@@ -523,7 +537,7 @@ namespace block_diag_ilu {
                         s += m_view.sub(di-1, bri-di, ci) * y[(bri-di)*blockw + ci];
                     }
                     for (int bci=0; bci <= m_view.m_nsat + bri - nblocks; ++bci){
-                        s += m_view.sat(bri-nblocks-bci, bci, ci) * y[bci*blockw + ci];
+                        s += m_view.bot(nblocks+bci-bri-1, bci, ci) * y[bci*blockw + ci];
                     }
                     y[bri*blockw + li] = b[bri*blockw + m_rowbycol[bri*blockw + li]] - s;
                 }
@@ -539,7 +553,7 @@ namespace block_diag_ilu {
                         s += m_view.sup(di-1, bri, ci)*x[(bri+di)*blockw + ci];
                     }
                     for (int sati=m_view.m_nsat; sati > bri; --sati){
-                        s += m_view.sat(sati, bri, ci)*x[(nblocks - sati + bri)*blockw + ci];
+                        s += m_view.top(sati-1, bri, ci)*x[(nblocks - sati + bri)*blockw + ci];
                     }
                     x[bri*blockw+li-1] = (y[bri*blockw + li-1] - s)\
                         /(m_view.block(bri, li-1, li-1));

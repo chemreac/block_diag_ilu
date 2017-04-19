@@ -45,8 +45,11 @@ cdef class Compressed:
     def get_sup(self, di, bi, ci):
         return self.view.sup(di, bi, ci)
 
-    def get_sat(self, si, bi, ci):
-        return self.view.sat(si, bi, ci)
+    def get_bot(self, si, bi, ci):
+        return self.view.bot(si, bi, ci)
+
+    def get_top(self, si, bi, ci):
+        return self.view.top(si, bi, ci)
 
     def set_block(self, bi, ri, ci, value):
         self.view.set_block(bi, ri, ci, value)
@@ -57,8 +60,11 @@ cdef class Compressed:
     def set_sup(self, di, bi, ci, value):
         self.view.set_sup(di, bi, ci, value)
 
-    def set_sat(self, si, bi, ci, value):
-        self.view.set_sat(si, bi, ci, value)
+    def set_bot(self, si, bi, ci, value):
+        self.view.set_bot(si, bi, ci, value)
+
+    def set_top(self, si, bi, ci, value):
+        self.view.set_top(si, bi, ci, value)
 
     def dot_vec(self, cnp.ndarray[cnp.float64_t, ndim=1, mode='c'] vec):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] out = np.empty(vec.size)
@@ -97,8 +103,8 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
     for si in range(nsat):
         for bi in range(si+1):
             for ci in range(blockw):
-                cmprs.set_sat( si+1, bi, ci, A[bi*blockw + ci, (nblocks - si - 1 + bi)*blockw + ci])
-                cmprs.set_sat(-si-1, bi, ci, A[(nblocks - si - 1 + bi)*blockw + ci, bi*blockw + ci])
+                cmprs.set_top(si, bi, ci, A[bi*blockw + ci, (nblocks - si - 1 + bi)*blockw + ci])
+                cmprs.set_bot(si, bi, ci, A[(nblocks - si - 1 + bi)*blockw + ci, bi*blockw + ci])
     return cmprs
 
 

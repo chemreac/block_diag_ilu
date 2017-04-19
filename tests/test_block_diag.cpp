@@ -59,18 +59,18 @@ block_diag_ilu::ColMajBlockDiagMat<double> get_test_case_sat(){
         for (int ci=0; ci<2; ++ci)
             for (int ri=0; ri<2; ++ri)
                 cmbdm.m_view.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
-    cmbdm.m_view.sat(1, 0, 0) = 4;
-    cmbdm.m_view.sat(1, 0, 1) = 8;
+    cmbdm.m_view.top(0, 0, 0) = 4;
+    cmbdm.m_view.top(0, 0, 1) = 8;
     cmbdm.m_view.sat(2, 0, 0) = 3;
     cmbdm.m_view.sat(2, 0, 1) = 7;
     cmbdm.m_view.sat(2, 1, 0) = 9;
     cmbdm.m_view.sat(2, 1, 1) = 1;
     cmbdm.m_view.sat(-1, 0, 0) = 8;
     cmbdm.m_view.sat(-1, 0, 1) = 3;
-    cmbdm.m_view.sat(-2, 0, 0) = 1;
-    cmbdm.m_view.sat(-2, 0, 1) = 6;
-    cmbdm.m_view.sat(-2, 1, 0) = 2;
-    cmbdm.m_view.sat(-2, 1, 1) = 5;
+    cmbdm.m_view.bot(1, 0, 0) = 1;
+    cmbdm.m_view.bot(1, 0, 1) = 6;
+    cmbdm.m_view.bot(1, 1, 0) = 2;
+    cmbdm.m_view.bot(1, 1, 1) = 5;
     return cmbdm;
 }
 
