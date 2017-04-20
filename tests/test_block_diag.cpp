@@ -78,14 +78,19 @@ block_diag_ilu::ColMajBlockDiagMatrixView<double> get_test_case_sat(){
 
 TEST_CASE( "get_global sattelites", "[ViewBase]" ) {
     auto cmbdmv = get_test_case_sat();
-    std::array<double, 36> ref {{7, 2, 3, 0, 4, 0, 6, 6, 0, 7, 0, 8, 1, 0, 1, 3, 9, 0, 0, 6, 5, 4, 0, 1
-                , 8, 0, 2, 0, 9, 7, 0, 3, 0, 5, 2, 3}};
+    std::array<double, 36> ref {{7, 2, 3, 0, 4, 0,
+                6, 6, 0, 7, 0, 8,
+                1, 0, 1, 3, 9, 0,
+                0, 6, 5, 4, 0, 1,
+                8, 0, 2, 0, 9, 7,
+                0, 3, 0, 5, 2, 3}};
 
     for (int i=0; i<36; ++i){
         const int ri = i/6;
         const int ci = i%6;
-        if (cmbdmv.valid_index(ri, ci))
+        if (cmbdmv.valid_index(ri, ci)){
             REQUIRE( std::abs((cmbdmv(ri, ci) - ref[i])/1e-15) < 1 );
+        }
     }
 }
 
@@ -332,6 +337,11 @@ TEST_CASE( "average_diag_weight", "[ColMajBlockDiagView]" ) {
 
 
 TEST_CASE( "set_to_eye_plus_scaled_mtx", "[ColMajBlockDiagView]" ) {
+    constexpr int blockw = 2;
+    constexpr int nblocks = 3;
+    constexpr int ndiag = 1;
+    constexpr int nsat = 0;
+    constexpr int ld = blockw;
     std::array<double, 2*2*3 + 2*2 + 2*2> data {{1, 2, 3, 4,
                 5, 6, 7, 8,
                 9, 10, 11, 12,
@@ -340,11 +350,11 @@ TEST_CASE( "set_to_eye_plus_scaled_mtx", "[ColMajBlockDiagView]" ) {
 
             17, 18, 19, 20 }};
     block_diag_ilu::ColMajBlockDiagMatrixView<double> v {
-        data.data(), 3, 2, 1, 0, 2};
+        data.data(), nblocks, blockw, ndiag, nsat, ld};
 
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> m {nullptr, 3, 2, 1, 0};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> m {nullptr, nblocks, blockw, ndiag, nsat, ld};
     double gamma = 0.7;
-    m.set_to_eye_plus_scaled_mtx(gamma, v);
+    m.set_to_eye_plus_scaled_mtx(-gamma, v);
 
     double * blocks = data.data();
     double * sub = data.data() + 2*2*3;
@@ -490,12 +500,11 @@ TEST_CASE( "dot_vec2", "[ColMajBlockDiagMat]" ) {
     const int nsat = 0;
     const int ld = 4;
 
-        block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdmv {nullptr, nblocks, blockw, ndiag, nsat, ld};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdmv {nullptr, nblocks, blockw, ndiag, nsat, ld};
     for (int bi=0; bi<nblocks; ++bi)
-        for (int ci=0; ci<blockw; ++ci){
+        for (int ci=0; ci<blockw; ++ci)
             for (int ri=0; ri<blockw; ++ri)
                 cmbdmv.block(bi, ri, ci) = 1.2*bi + 4.1*ci - 2.7*ri;
-        }
 
     for (int di=0; di<ndiag; ++di){
         for (int bi=0; bi<nblocks-di-1; ++bi){
@@ -510,11 +519,15 @@ TEST_CASE( "dot_vec2", "[ColMajBlockDiagMat]" ) {
     for (int i=0; i<nx; ++i)
         x[i] = 1.5*nblocks*blockw - 2.7*i;
 
-    std::array<double, nblocks*blockw> bref;
+    std::array<double, nx> bref;
     for (int ri=0; ri<nx; ++ri){
         double val = 0.0;
         for (int ci=0; ci<nx; ++ci){
-            val += x[ci] * cmbdmv(ri, ci);
+            try{
+                val += x[ci] * cmbdmv(ri, ci);
+            } catch (...) {
+                ; // invalid indices
+            }
         }
         bref[ri] = val;
     }
@@ -528,6 +541,7 @@ TEST_CASE( "dot_vec_ColMajBlockDiagView", "[ColMajBlockDiagView]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 1;
+    const int nsat=0;
     const int ld = blockw;
     // 5 3 2 # # #
     // 5 8 # 3 # #
@@ -535,9 +549,9 @@ TEST_CASE( "dot_vec_ColMajBlockDiagView", "[ColMajBlockDiagView]" ) {
     // # 2 4 4 # 5
     // # # 3 # 6 9
     // # # # 4 2 7
-    std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
+    std::array<double, blockw*blockw*nblocks + 2*blockw*(nblocks-1)> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
                 1, 2, 3, 4, 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, ld};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
@@ -551,6 +565,7 @@ TEST_CASE( "copy_to_matrix", "[ColMajBlockDiagView]" ) {
     const int nblocks = 3;
     const int ndiag = 1;
     const int ld = blockw;
+    const int nsat = 0;
     // 5 3 2 # # #
     // 5 8 # 3 # #
     // 1 # 8 4 4 #
@@ -559,7 +574,7 @@ TEST_CASE( "copy_to_matrix", "[ColMajBlockDiagView]" ) {
     // # # # 4 2 7
     std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
                 1, 2, 3, 4, 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {data.data(), nblocks, blockw, ndiag, ld};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {data.data(), nblocks, blockw, ndiag, nsat, ld};
     auto mv = cmbdv;
     for (int bi=0; bi<3; ++bi){
         for (int ri=0; ri<2; ++ri){
@@ -656,14 +671,14 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
     long double * blocks = data.data()
     long double * sub = data.data() + blockw*blockw*nblocks;
     long double * sup = data.data() + blockw*blockw*nblocks + blockw*(nblocks-1);
-    for (int bi=0; bi<3; ++bi)
-        for (int ci=0; ci<2; ++ci){
-            if (bi<2){
-                cmbdmv.sub(0, bi, ci) = sub[bi*2+ci];
-                cmbdmv.sup(0, bi, ci) = sup[bi*2+ci];
+    for (int bi=0; bi<nblocks; ++bi)
+        for (int ci=0; ci<blockw; ++ci){
+            if (bi<nblocks-1){
+                cmbdmv.sub(0, bi, ci) = sub[bi*blockw+ci];
+                cmbdmv.sup(0, bi, ci) = sup[bi*blockw+ci];
             }
-            for (int ri=0; ri<2; ++ri)
-                cmbdmv.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
+            for (int ri=0; ri<blockw; ++ri)
+                cmbdmv.block(bi, ri, ci) = blocks[bi*blockw*blockw + ci*blockw + ri];
         }
 
     block_diag_ilu::ILU_inplace<long double> ilu(cmbdv);
@@ -702,7 +717,7 @@ TEST_CASE( "ilu inplace with blockw1", "[ILU_inplace]" ) {
     constexpr int blockw = 1;
     constexpr int ndiag = 2;
     constexpr int nsat = 0;
-    constexpr int ld = 1;
+    constexpr int ld = blockw;
     block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdmv {nullptr, nblocks, blockw, ndiag, nsat, ld};
     // 5 3 2 # # #
     // 5 8 # 3 # #
@@ -710,42 +725,72 @@ TEST_CASE( "ilu inplace with blockw1", "[ILU_inplace]" ) {
     // # 2 4 4 # 5
     // # # 3 # 6 9
     // # # # 4 2 7
-    std::array<double, blockw*blockw*nblocks> blocks {{
+    std::array<double, ld*blockw*nblocks> blocks {{
             5, 8,
             8, 4,
             6, 7}};
-    std::array<double,blockw*(nblocks-1)> sub {{
+    std::array<double, ld*(2*nblocks-3)> sub {{
+            5, 0, 4, 0, 2,
             1, 2, 3, 4 }};
-    std::array<double,blockw*(nblocks-1)> sup {{
+    std::array<double, ld*(2*nblocks-3)> sup {{
+            3, 0, 4, 0, 9,
             2, 3, 4, 5 }};
-    for (int bi=0; bi<3; ++bi)
-        for (int ci=0; ci<2; ++ci){
-            if (bi<2){
-                cmbdmv.sub(0, bi, ci) = sub[bi*2+ci];
-                cmbdmv.sup(0, bi, ci) = sup[bi*2+ci];
+    for (int bi=0; bi<nblocks; ++bi)
+        for (int ci=0; ci<blockw; ++ci){
+            for (int di=0; di<ndiag; ++di){
+                const int skip = di*nblocks - (di*di + di)/2;
+                if (bi<nblocks-di-1){
+                    cmbdmv.sub(di, bi, ci) = sub[skip + bi*blockw + ci];
+                    cmbdmv.sup(di, bi, ci) = sup[skip + bi*blockw + ci];
+                }
+                for (int ri=0; ri<blockw; ++ri)
+                    cmbdmv.block(bi, ri, ci) = blocks[(bi*blockw + ci)*ld + ri];
             }
-            for (int ri=0; ri<2; ++ri)
-                cmbdmv.block(bi, ri, ci) = blocks[bi*4 + ci*2 + ri];
         }
 
     block_diag_ilu::ILU_inplace<double> ilu(cmbdmv);
+    //  5   3   2   #   #   #
+    // 1/1  8   #   3   #   #
+    // 1/5  #   8   4   4   #
+    //  #  1/4 1/2  4   #   5
+    //  #   #  3/8  #   6   9
+    //  #   #   #  1/1 1/3  7
 
     SECTION( "check lower correctly computed" ) {
-        REQUIRE( std::abs(ilu.m_view.sub(0, 0, 0) - 1/5.) < 1e-15 );
-        REQUIRE( std::abs(ilu.m_view.sub(0, 0, 1) - 2/5.) < 1e-15 );
-        REQUIRE( std::abs(ilu.m_view.sub(0, 1, 0) - 3/8.) < 1e-15 );
-        REQUIRE( std::abs(ilu.m_view.sub(0, 1, 1) - 4/2.) < 1e-15 );
+        REQUIRE( std::abs(ilu.m_view.sub(1, 0, 0) - 1/5.) < 1e-15 );
+        REQUIRE( std::abs(ilu.m_view.sub(1, 1, 0) - 2/8.) < 1e-15 );
+        REQUIRE( std::abs(ilu.m_view.sub(1, 2, 0) - 3/8.) < 1e-15 );
+        REQUIRE( std::abs(ilu.m_view.sub(1, 3, 0) - 4/4.) < 1e-15 );
     }
-    SECTION( "check upper still perserved" ) {
-        REQUIRE( ilu.m_view.sup(0, 0, 0) == 2 );
-        REQUIRE( ilu.m_view.sup(0, 0, 1) == 3 );
-        REQUIRE( ilu.m_view.sup(0, 1, 0) == 4 );
-        REQUIRE( ilu.m_view.sup(0, 1, 1) == 5 );
+    SECTION( "check upper still preserved" ) {
+        REQUIRE( ilu.m_view.sup(1, 0, 0) == 2 );
+        REQUIRE( ilu.m_view.sup(1, 1, 0) == 3 );
+        REQUIRE( ilu.m_view.sup(1, 2, 0) == 4 );
+        REQUIRE( ilu.m_view.sup(1, 3, 0) == 5 );
     }
+
+    // LUx = b
+    // Ly = b
+    // Ux = y
+    //
+    // y[0] = 65
+    // y[1] = 202 - 65 = 137
+    // y[2] = 11 - 65/5 = -2
+    // y[3] = 65 - 137?/4 - 11/2 = 9 // <--- from here it's most likely wrong
+    // y[4] = 60 - 11*3/8 = 55.875
+    // y[5] = 121 - 65 - 60/3 = 36
+    //
+    // x[5] = 36 / 7
+    // x[4] = (55.875 - 9*36) / 6
+    // x[3] = (9 - 5*36) / 4
+    // x[2] = (-2 - 4*9 - 4*55.875) / 8
+    // x[1] = (137 - 3*9) / 8
+    // x[0] = (65 - 3*137 + 2*2) / 5
+
     SECTION( "solve performs adequately" ) {
         std::array<double, 6> b {{65, 202, 11, 65, 60, 121}};
-        std::array<double, 6> xref {{-31.47775, 53.42125, 31.0625,
-                    -43.36875, -19.25625, 19.5875}};
+        std::array<double, 6> xref {{5.142857142857143,
+                    }};
         std::array<double, 6> x;
         int flag = ilu.solve(b.data(), x.data());
         REQUIRE( flag == 0 );

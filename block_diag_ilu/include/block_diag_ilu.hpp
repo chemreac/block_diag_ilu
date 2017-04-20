@@ -94,7 +94,7 @@ namespace block_diag_ilu {
 #define NITEMS MatrixView<Real_t>::alignment_items_
 #define LD ((ld == 0) ? NITEMS*((blockw + NITEMS - 1)/NITEMS) : ld)
 #define BLK_NDATA nblocks*blockw*LD
-#define DIAG_HLF_NDATA (ndiag*nblocks - (ndiag*ndiag + ndiag))*LD
+#define DIAG_HLF_NDATA (ndiag*nblocks - (ndiag*ndiag + ndiag)/2)*LD
 #define SAT_HLF_NDATA (nsat*nsat+nsat)/2*LD
 #define TOT_NDATA (BLK_NDATA + 2*(DIAG_HLF_NDATA + SAT_HLF_NDATA))
 
@@ -204,7 +204,7 @@ namespace block_diag_ilu {
             return this->m_data[SKIPIDXDIAG + m_blk_ndata + m_diag_hlf_ndata];
         }
 #undef SKIPIDXDIAG
-#define SKIPIDXSAT ((sati*sati + sati)/2 + blocki)*this->m_blockw + coli
+#define SKIPIDXSAT ((sati*sati + sati)/2 + blocki)*(this->m_ld) + coli
         Real_t& bot(const int sati, const int blocki, const int coli) const noexcept {
             return this->m_data[SKIPIDXSAT + m_blk_ndata + 2*m_diag_hlf_ndata];
         }
