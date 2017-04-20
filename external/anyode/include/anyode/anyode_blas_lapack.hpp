@@ -14,21 +14,21 @@ extern "C" void sgesvd_(const char* jobu, const char* jobvt, int* m, int* n, con
 extern "C" void dgetrf_(const int* dim1, const int* dim2, double* a, int* lda, int* ipiv, int* info);
 extern "C" void sgetrf_(const int* dim1, const int* dim2, float* a, int* lda, int* ipiv, int* info);
 
-extern "C" void dgetrs_(const char* trans, int* n, int* nrhs, const double* a, int* lda, int* ipiv, double * b, int* ldb, int*info);
-extern "C" void sgetrs_(const char* trans, int* n, int* nrhs, const float* a, int* lda, int* ipiv, float * b, int* ldb, int*info);
+extern "C" void dgetrs_(const char* trans, const int* n, const int* nrhs, double* a, const int* lda, int* ipiv, double * b, const int* ldb, int* info, int sundials__=0);
+extern "C" void sgetrs_(const char* trans, const int* n, const int* nrhs, float* a, const int* lda, int* ipiv, float * b, const int* ldb, int* info, int sundials__=0);
 
 extern "C" void dgbmv_(const char* trans, int* m, int* n, int* kl, int* ku, const double* alpha, const double* a, int* lda,
                        const double* x, int* incx, const double* beta, double* y, int* incy, int sundials__=0);
 extern "C" void sgbmv_(const char* trans, int* m, int* n, int* kl, int* ku, const float* alpha, const float* a, int* lda,
                        const float* x, int* incx, const float* beta, float* y, int* incy, int sundials__=0);
 
-extern "C" void dgbtrf_(const int* dim1, const int* dim2, int* kl, int* ku, double* a, int* lda, int* ipiv, int* info);
-extern "C" void sgbtrf_(const int* dim1, const int* dim2, int* kl, int* ku, float* a, int* lda, int* ipiv, int* info);
+extern "C" void dgbtrf_(const int* dim1, const int* dim2, const int* kl, const int* ku, double* a, int* lda, int* ipiv, int* info);
+extern "C" void sgbtrf_(const int* dim1, const int* dim2, const int* kl, const int* ku, float* a, int* lda, int* ipiv, int* info);
 
-extern "C" void dgbtrs_(const char* trans, int* n, int* kl, int* ku, int* nrhs, const double* a,
-                        int* lda, int* ipiv, double * b, int* ldb, int*info);
-extern "C" void sgbtrs_(const char* trans, int* n, int* kl, int* ku, int* nrhs, const float* a,
-                        int* lda, int* ipiv, float * b, int* ldb, int*info);
+extern "C" void dgbtrs_(const char* trans, const int* n, const int* kl, const int* ku, const int* nrhs, double* a,
+                        const int* lda, int* ipiv, double * b, const int* ldb, int *info, int sundials__=0);
+extern "C" void sgbtrs_(const char* trans, const int* n, const int* kl, const int* ku, const int* nrhs, float* a,
+                        const int* lda, int* ipiv, float * b, const int* ldb, int*info, int sundials__=0);
 
 
 #define PROXY_DEFINE(CLS_NAME)                                     \

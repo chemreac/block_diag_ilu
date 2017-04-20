@@ -2,25 +2,29 @@
 #define CATCH_CONFIG_MAIN  // This tells Catch to provide a main()
 #include "catch.hpp"
 #include "block_diag_ilu.hpp"
-#include "block_diag_ilu/banded.hpp"
+#include <anyode/anyode_decomposition.hpp>
+
 #include <array>
 #include <cmath>
 
 
-TEST_CASE( "LU(view)", "[LU]" ) {
+TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
 
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 1;
-    std::array<double, blockw*blockw*nblocks> block_d {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
-    std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4}};
-    std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagView<double> cmbdv {&block_d[0], &sub_d[0], &sup_d[0], nblocks, blockw, ndiag};
+    const int ld = blockw;
+    std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
+                1, 2, 3, 4, 2, 3, 4, 5}};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {data.data(), nblocks, blockw, ndiag, ld};
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
-    auto lu = block_diag_ilu::LU<double>(cmbdv);
+    const int nouter = ndiag*blockw + blockw - 1;
+    auto bndv = AnyODE::BandedPaddedMatrixView<double>(cmbdv, nouter, nouter);
+    auto lu = AnyODE::BandedLU<double>(&bndv);
+
 // >>> scipy.linalg.lu_factor(numpy.array([[5, 3, 2, 0, 0, 0],
 //                                         [5, 8, 0, 3, 0, 0],
 //                                         [1, 0, 8, 4, 4, 0],
@@ -48,39 +52,43 @@ TEST_CASE( "LU(view)", "[LU]" ) {
 
     // only check first three rows (row swapping)
 
-    REQUIRE( std::abs((lu.m_data[4] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[5] - 1)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[6] - 0.2)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[4] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[5] - 1)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[6] - 0.2)/1e-15) < 1 );
 
-    REQUIRE( std::abs((lu.m_data[10] - 3)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[11] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[12] + 0.12)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[10] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[11] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[12] + 0.12)/1e-15) < 1 );
 
-    REQUIRE( std::abs((lu.m_data[16] - 2)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[17] + 2)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[18] - 7.36)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[16] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[17] + 2)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[18] - 7.36)/1e-15) < 1 );
 
-    REQUIRE( std::abs((lu.m_data[23] - 3)/1e-15) < 1 );
-    REQUIRE( std::abs((lu.m_data[24] - 4.36)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[23] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[24] - 4.36)/1e-15) < 1 );
 
-    REQUIRE( std::abs((lu.m_data[30] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((lu.m_view->m_data[30] - 4)/1e-15) < 1 );
 
 }
 
-TEST_CASE( "solve", "[LU]" ) {
+TEST_CASE( "solve", "[BandedLU]" ) {
 
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 1;
-    std::array<double, blockw*blockw*nblocks> block_d {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
-    std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4}};
-    std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagView<double> cmbdv {&block_d[0], &sub_d[0], &sup_d[0], nblocks, blockw, ndiag};
+    const int ld = blockw;
+    std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{
+            5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
+                1, 2, 3, 4,
+                2, 3, 4, 5}};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, ld};
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
-    auto lu = block_diag_ilu::LU<double>(cmbdv);
+    const int nouter = ndiag*blockw + blockw - 1;
+    auto bndv = AnyODE::BandedPaddedMatrixView<double>(cmbdv, nouter, nouter);
+    auto lu = AnyODE::BandedLU<double>(&bndv);
     int flag = lu.solve(&b[0], &x[0]);
     REQUIRE( flag == 0 );
     for (int idx=0; idx<blockw*nblocks; ++idx){
@@ -94,7 +102,7 @@ std::array<double, 28> get_arr(){
                 0, 1, 4, 8, 3, 0, 0, 0, 2, 5, 9, 0, 0 }};
 }
 
-block_diag_ilu::ColMajBandedView<double> get_cmbv(std::array<double, 28>& arr){
+block_diag_ilu::BlockBandedView<double> get_cmbv(std::array<double, 28>& arr){
     // 0 0 0 0
     // 0 0 0 0
     // 0 0 1 2
@@ -111,8 +119,7 @@ block_diag_ilu::ColMajBandedView<double> get_cmbv(std::array<double, 28>& arr){
     const int blockw = 2;
     const int nblocks = 2;
     const int ndiag = 1;
-    const int nouter = 2;
-    return block_diag_ilu::ColMajBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
+    return block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
 
@@ -154,7 +161,7 @@ std::array<double, 13*6> get_arr2(){
                 0, 0, 0, 8, 0, 7, 2, 6, 0, 0, 0, 0}};
 }
 
-block_diag_ilu::ColMajBandedView<double> get_cmbv2(std::array<double, 13*6>& arr){
+block_diag_ilu::BlockBandedView<double> get_cmbv2(std::array<double, 13*6>& arr){
     // 0 0 0 0 0 0
     // 0 0 0 0 0 0
     // 0 0 0 0 0 0
@@ -178,7 +185,7 @@ block_diag_ilu::ColMajBandedView<double> get_cmbv2(std::array<double, 13*6>& arr
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    return block_diag_ilu::ColMajBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
+    return block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
 
@@ -227,7 +234,7 @@ TEST_CASE( "sup2", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.sup(1, 0, 1) == 8 );
 }
 
-TEST_CASE( "block_sub_sup__offset", "[ColMajBandedView]" ) {
+TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
     // 1 2 3 0 4 0
     // 5 6 0 7 0 8
     // 9 0 1 2 3 0
@@ -256,7 +263,7 @@ TEST_CASE( "block_sub_sup__offset", "[ColMajBandedView]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    auto cmbv = block_diag_ilu::ColMajBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag, 0, 0);
+    auto cmbv = block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
     REQUIRE( cmbv.m_ld == 9 );
     for (auto i=0; i<2; ++i){
         REQUIRE( cmbv.block(i, 0, 0) == 1 );
@@ -279,21 +286,22 @@ TEST_CASE( "block_sub_sup__offset", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.sub(1, 0, 1) == 3 );
 }
 
-TEST_CASE( "to_banded", "[ColMajBlockDiagView]" ) {
+TEST_CASE( "as_banded_padded", "[ColMajBlockDiagMatrixView]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 1;
+    const int ld = blockw;
     // 5 3 2 # # #
     // 5 8 # 3 # #
     // 1 # 8 4 4 #
     // # 2 4 4 # 5
     // # # 3 # 6 9
     // # # # 4 2 7
-    std::array<double, blockw*blockw*nblocks> block_d {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7}};
-    std::array<double, blockw*nblocks> sub_d {{1, 2, 3, 4}};
-    std::array<double, blockw*nblocks> sup_d {{2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagView<double> cmbdv {&block_d[0], &sub_d[0], &sup_d[0], nblocks, blockw, ndiag};
-    auto banded = cmbdv.to_banded();
+    std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
+                1, 2, 3, 4,
+                2, 3, 4, 5}};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, ld};
+    auto banded = cmbdv.as_banded_padded();
 
 //   0   7  14  21  28  35
 //   -   -   -   -   -   -
@@ -304,29 +312,29 @@ TEST_CASE( "to_banded", "[ColMajBlockDiagView]" ) {
 //4  5   8   8   4   6   7
 //5  5   #   4   #   2   X
 //6  1   2   3   4   X   X
-    REQUIRE( std::abs((banded[4] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[5] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[6] - 1)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[4] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[5] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[6] - 1)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded[10] - 3)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[11] - 8)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[13] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[10] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[11] - 8)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[13] - 2)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded[16] - 2)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[18] - 8)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[19] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[20] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[16] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[18] - 8)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[19] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[20] - 3)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded[23] - 3)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[24] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[25] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[27] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[23] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[24] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[25] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[27] - 4)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded[30] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[32] - 6)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[33] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[30] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[32] - 6)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[33] - 2)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded[37] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[38] - 9)/1e-15) < 1 );
-    REQUIRE( std::abs((banded[39] - 7)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[37] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[38] - 9)/1e-15) < 1 );
+    REQUIRE( std::abs((banded.m_data[39] - 7)/1e-15) < 1 );
 }

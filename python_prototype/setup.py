@@ -13,8 +13,8 @@ if __name__ == '__main__':
         'extra_link_args': [],
         'language': 'c++'
     }
-    if os.environ.get('BLOCK_DIAG_ILU_WITH_DGETRF', '0') == '1':
-        kwargs['extra_compile_args'] += ['-DBLOCK_DIAG_ILU_WITH_DGETRF']
+    if os.environ.get('BLOCK_DIAG_ILU_WITH_GETRF', '0') == '1':
+        kwargs['extra_compile_args'] += ['-DBLOCK_DIAG_ILU_WITH_GETRF']
     else:
         kwargs['libraries'] = ['lapack']
 

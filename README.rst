@@ -44,7 +44,7 @@ The following macros affect the compilation:
 |                           |`BLOCK_DIAG_ILU_NUM_THREADS` to control number |               |
 |                           |of threads.                                    |               |
 +---------------------------+-----------------------------------------------+---------------+
-|BLOCK_DIAG_ILU_WITH_DGETRF |Use unblocked (parallell) internal             |undefined      |
+|BLOCK_DIAG_ILU_WITH_GETRF  |Use unblocked (parallell) internal             |undefined      |
 |                           |implementation of LAPACK's ``dgetrf``.         |               |
 +---------------------------+-----------------------------------------------+---------------+
 

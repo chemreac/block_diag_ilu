@@ -4,14 +4,14 @@
 
 cimport numpy as cnp
 from cython.operator cimport dereference as deref
-from block_diag_ilu cimport ColMajBlockDiagView, ILU, LU
+from block_diag_ilu cimport ColMajBlockDiagMatrixView, ILU, LU
 
 import numpy as np
 from .datastruct import alloc_compressed, diag_data_len
 
 
 cdef class Compressed:
-    cdef ColMajBlockDiagView[double] *view
+    cdef ColMajBlockDiagMatrixView[double] *view
     cdef public double[::1] data
 
     def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0):
@@ -79,7 +79,7 @@ cdef class Compressed:
         cdef cnp.ndarray[cnp.float64_t, ndim=2, mode='c'] A = np.empty((dim, dim))
         for ri in range(dim):
             for ci in range(dim):
-                A[ri, ci] = self.view.get_global(ri, ci)
+                A[ri, ci] = self.view(ri, ci)
         return A
 
 

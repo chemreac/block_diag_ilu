@@ -1,5 +1,6 @@
-include external/anyode/include/anyode/anyode_buffer.hpp
 include external/anyode/include/anyode/anyode_blas_lapack.hpp
+include external/anyode/include/anyode/anyode_buffer.hpp
+include external/anyode/include/anyode/anyode_matrix.hpp
 recursive-include block_diag_ilu/include *.hpp *.pxd
 include AUTHORS
 include CHANGES.rst

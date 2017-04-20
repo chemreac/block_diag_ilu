@@ -9,7 +9,7 @@ fi
     export ASAN_OPTIONS=symbolize=1
     make clean; make CXX=clang++-3.8 EXTRA_FLAGS="-fsanitize=address"
     make clean; make DEFINES=-D_GLIBCXX_DEBUG
-    make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_DGETRF" LIBS=""
+    make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
     make clean; make test_block_diag_omp
     BLOCK_DIAG_ILU_NUM_THREADS=2 ./test_block_diag_omp --abortx 1
 )
@@ -29,15 +29,15 @@ VERSION=$(python3 setup.py --version)
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
     rm _block_diag_ilu.so
-    BLOCK_DIAG_ILU_WITH_DGETRF=1 python setup.py build_ext -i
+    BLOCK_DIAG_ILU_WITH_GETRF=1 python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
     rm _block_diag_ilu.so
-    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_DGETRF=0 python setup.py build_ext -i
+    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=0 python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
     rm _block_diag_ilu.so
-    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_DGETRF=1 python setup.py build_ext -i
+    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=1 python setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
     PYTHONPATH=$(pwd) python demo.py
 
