@@ -648,7 +648,7 @@ TEST_CASE( "rms_diag", "[ColMajBlockDiagMat]" ) {
 // }
 
 #if defined(BLOCK_DIAG_ILU_WITH_GETRF)
-TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
+TEST_CASE( "long_double_ilu_inplace", "[ILU_inplace]" ) {
     constexpr int nblocks = 3;
     constexpr int blockw = 2;
     constexpr int ndiag = 1;
@@ -668,7 +668,7 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
 
                 1, 2, 3, 4,
                 2, 3, 4, 5 }};
-    long double * blocks = data.data()
+    long double * blocks = data.data();
     long double * sub = data.data() + blockw*blockw*nblocks;
     long double * sup = data.data() + blockw*blockw*nblocks + blockw*(nblocks-1);
     for (int bi=0; bi<nblocks; ++bi)
@@ -681,7 +681,7 @@ TEST_CASE( "long double ilu inplace", "[ILU_inplace]" ) {
                 cmbdmv.block(bi, ri, ci) = blocks[bi*blockw*blockw + ci*blockw + ri];
         }
 
-    block_diag_ilu::ILU_inplace<long double> ilu(cmbdv);
+    block_diag_ilu::ILU_inplace<long double> ilu(cmbdmv);
 
     SECTION( "check lower correctly computed" ) {
         REQUIRE( std::abs(ilu.m_view.sub(0, 0, 0) - 1/5.L) < 1e-18L );

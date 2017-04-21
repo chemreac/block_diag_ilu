@@ -11,23 +11,18 @@ from .datastruct import alloc_compressed, diag_data_len
 
 
 cdef class Compressed:
-    cdef ColMajBlockDiagMatrixView[double] *view
-    cdef public double[::1] data
+    cdef ColMajBlockDiagMatrixView[double] *thisptr
+    #cdef public double[::1] data
 
     def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0):
-        cdef:
-            int n_skip_elem_sub = blockw*blockw*nblocks
-            int n_skip_elem_sup = n_skip_elem_sub + diag_data_len(nblocks, blockw, ndiag)
-            int n_skip_elem_sat = n_skip_elem_sub + diag_data_len(nblocks, blockw, ndiag)*2
-        self.data = alloc_compressed(nblocks, blockw, ndiag, nsat)
-        self.view = new ColMajBlockDiagView[double](
-            &self.data[0],
-            <double*>NULL if ndiag == 0 else &self.data[n_skip_elem_sub],
-            <double*>NULL if ndiag == 0 else &self.data[n_skip_elem_sup],
-            nblocks, blockw, ndiag,
-            <double*>NULL if nsat == 0 else &self.data[n_skip_elem_sat],
-            nsat
-        )
+        self.view = new ColMajBlockDiagView[double](NULL, nblocks, blockw, ndiag, nsat)
+
+    @property
+    def data(self):
+        cdef cnp.ndarray[cnp.float64_t, ndim=1] arr = np.empty(self.thisptr.m_ndata)
+        for i in range(self.thisptr.m_ndata):
+            arr[i] = self.thisptr.m_data[i]
+        return arr
 
     def __dealloc__(self):
         del self.view

@@ -1,6 +1,19 @@
+cdef extern from "anyode/anyode_matrix.hpp" namespace "AnyODE":
+    cdef cppclass MatrixView[T]:
+        pass
+
+    cdef cppclass BandedPaddedMatrixView[T]:
+        pass
+
+cdef extern from "anyode/anyode_decomposition.hpp" namespace "AnyODE":
+    cdef cppclass BandedLU[T]:
+        BandedLU(BandedPaddedMatrixView[T]*)
+        int solve(T *, T *)
+
 cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
     cdef cppclass ColMajBlockDiagMatrixView[T]:
-        int m_nsat, m_blockw, m_nblocks
+        int m_nsat, m_blockw, m_nblocks, m_ndata
+        T * m_data
         ColMajBlockDiagMatrixView(T*, int, int, int, int)
         T& block(size_t, int, int)
         T& sub(int, int, int)
@@ -17,6 +30,8 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         void set_bot(int, int, int, T)
         void set_top(int, int, int, T)
 
+        BandedPaddedMatrixView[T] as_banded_padded()
+
     cdef cppclass ILU_inplace[T]:
         ColMajBlockDiagMatrixView[T] m_view
 
@@ -24,9 +39,3 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         ILU(ColMajBlockDiagMatrixView[T])
         int solve(T *, T *)
         ILU_inplace m_ilu_inplace
-
-
-cdef extern from "block_diag_ilu/banded.hpp" namespace "block_diag_ilu":
-    cdef cppclass LU[T]:
-        LU(ColMajBlockDiagView[T])
-        int solve(T *, T *)
