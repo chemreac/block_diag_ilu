@@ -13,18 +13,8 @@ TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 1;
+    const int nsat = 0;
     const int ld = blockw;
-    std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
-                1, 2, 3, 4, 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {data.data(), nblocks, blockw, ndiag, ld};
-    std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
-    std::array<double, blockw*nblocks> x;
-    std::array<double, blockw*nblocks> b;
-    cmbdv.dot_vec(&xref[0], &b[0]);
-    const int nouter = ndiag*blockw + blockw - 1;
-    auto bndv = AnyODE::BandedPaddedMatrixView<double>(cmbdv, nouter, nouter);
-    auto lu = AnyODE::BandedLU<double>(&bndv);
-
 // >>> scipy.linalg.lu_factor(numpy.array([[5, 3, 2, 0, 0, 0],
 //                                         [5, 8, 0, 3, 0, 0],
 //                                         [1, 0, 8, 4, 4, 0],
@@ -32,6 +22,24 @@ TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
 //                                         [0, 0, 3, 0, 6, 9],
 //                                         [0, 0, 0, 4, 2, 7]]))
 
+    std::array<double, blockw*blockw*nblocks + 2*blockw*(nblocks-1)> data {{
+            5, 5, 3, 8,
+                8, 4, 4, 4,
+                6, 2, 9, 7,
+                1, 2, 3, 4,
+                2, 3, 4, 5}};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {data.data(), nblocks, blockw, ndiag, nsat, ld};
+    std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
+    std::array<double, blockw*nblocks> x;
+    std::array<double, blockw*nblocks> b;
+    cmbdv.dot_vec(&xref[0], &b[0]);
+    const int nouter = ndiag*blockw;
+    auto bndv = AnyODE::BandedPaddedMatrixView<double>(cmbdv, nouter, nouter);
+    REQUIRE( bndv.m_kl == 2 );
+    REQUIRE( bndv.m_ku == 2 );
+    REQUIRE(std::abs(bndv.m_data[4] - 5) < 1e-15);
+
+    auto lu = AnyODE::BandedLU<double>(&bndv);
 // array([[  5.00000000e+00,   3.00000000e+00,   2.00000000e+00,   0.00000000e+00,   0.00000000e+00,   0.00000000e+00],
 //        [  1.00000000e+00,   5.00000000e+00,  -2.00000000e+00,   3.00000000e+00,   0.00000000e+00,   0.00000000e+00],
 //        [  2.00000000e-01,  -1.20000000e-01,   7.36000000e+00,   4.36000000e+00,   4.00000000e+00,   0.00000000e+00],
@@ -76,12 +84,13 @@ TEST_CASE( "solve", "[BandedLU]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 1;
+    const int nsat = 0;
     const int ld = blockw;
     std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{
             5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
                 1, 2, 3, 4,
                 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, ld};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
@@ -97,9 +106,12 @@ TEST_CASE( "solve", "[BandedLU]" ) {
 
 }
 
-std::array<double, 28> get_arr(){
-    return std::array<double, 7*4> {{ 0, 0, 0, 0, 6, 1, 4, 0, 0, 0, 3, 7, 2, 5, 0,
-                0, 1, 4, 8, 3, 0, 0, 0, 2, 5, 9, 0, 0 }};
+std::array<double, 7*4> get_arr(){
+    return std::array<double, 7*4> {{ 0, 0, 0, 0, 6, 1, 4,
+                0, 0, 0, 3, 7, 2, 5,
+                0, 0, 1, 4, 8, 3, 0,
+                0, 0, 2, 5, 9, 0, 0
+                }};
 }
 
 block_diag_ilu::BlockBandedView<double> get_cmbv(std::array<double, 28>& arr){
@@ -122,6 +134,41 @@ block_diag_ilu::BlockBandedView<double> get_cmbv(std::array<double, 28>& arr){
     return block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
+TEST_CASE( "global_block", "[ColMajBandedView]" ) {
+    auto arr = get_arr();
+    auto cmbv = get_cmbv(arr);
+    REQUIRE( cmbv(0, 0) == 6 );
+    REQUIRE( cmbv(0, 1) == 3 );
+    REQUIRE( cmbv(1, 0) == 1 );
+    REQUIRE( cmbv(1, 1) == 7 );
+
+    REQUIRE( cmbv(2, 2) == 8 );
+    REQUIRE( cmbv(2, 3) == 5 );
+    REQUIRE( cmbv(3, 2) == 3 );
+    REQUIRE( cmbv(3, 3) == 9 );
+}
+
+TEST_CASE( "global_sub", "[ColMajBandedView]" ) {
+    auto arr = get_arr();
+    auto cmbv = get_cmbv(arr);
+    REQUIRE( cmbv(2, 0) == 4 );
+    REQUIRE( cmbv(3, 1) == 5 );
+
+}
+
+TEST_CASE( "global_sup", "[ColMajBandedView]" ) {
+    auto arr = get_arr();
+    auto cmbv = get_cmbv(arr);
+    REQUIRE( cmbv(0, 2) == 1 );
+    REQUIRE( cmbv(1, 3) == 2 );
+}
+
+TEST_CASE( "global_non_accessible", "[ColMajBandedView]" ) {
+    auto arr = get_arr();
+    auto cmbv = get_cmbv(arr);
+    REQUIRE( cmbv(2, 1) == 2 );
+    REQUIRE( cmbv(1, 2) == 4 );
+}
 
 TEST_CASE( "block", "[ColMajBandedView]" ) {
     auto arr = get_arr();
@@ -253,19 +300,19 @@ TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
     // 8 3 0 0 0 0
 
 
-    std::array<double, 54> arr {{
-                0, 0, 0, 0, 1, 5, 9, 0, 8,
-                0, 0, 0, 2, 6, 0, 4, 0, 3,
-                0, 0, 3, 0, 1, 5, 9, 0, 0,
-                0, 0, 7, 2, 6, 0, 4, 0, 0,
-                4, 0, 3, 0, 1, 5, 0, 0, 0,
-                8, 0, 7, 2, 6, 0, 0, 0, 0}};
+    std::array<double, 13*6> arr {{
+                0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 9, 0, 8,
+                0, 0, 0, 0, 0, 0, 0, 2, 6, 0, 4, 0, 3,
+                0, 0, 0, 0, 0, 0, 3, 0, 1, 5, 9, 0, 0,
+                0, 0, 0, 0, 0, 0, 7, 2, 6, 0, 4, 0, 0,
+                0, 0, 0, 0, 4, 0, 3, 0, 1, 5, 0, 0, 0,
+                0, 0, 0, 0, 8, 0, 7, 2, 6, 0, 0, 0, 0}};
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
     auto cmbv = block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
-    REQUIRE( cmbv.m_ld == 9 );
-    for (auto i=0; i<2; ++i){
+    REQUIRE( cmbv.m_ld == 13 );
+    for (auto i=0; i < nblocks; ++i){
         REQUIRE( cmbv.block(i, 0, 0) == 1 );
         REQUIRE( cmbv.block(i, 0, 1) == 2 );
         REQUIRE( cmbv.block(i, 1, 0) == 5 );
@@ -275,6 +322,7 @@ TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
     REQUIRE( cmbv.sup(0, 0, 1) == 7 );
     REQUIRE( cmbv.sup(0, 1, 0) == 3 );
     REQUIRE( cmbv.sup(0, 1, 1) == 7 );
+
     REQUIRE( cmbv.sup(1, 0, 0) == 4 );
     REQUIRE( cmbv.sup(1, 0, 1) == 8 );
 
@@ -282,25 +330,29 @@ TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
     REQUIRE( cmbv.sub(0, 0, 1) == 4 );
     REQUIRE( cmbv.sub(0, 1, 0) == 9 );
     REQUIRE( cmbv.sub(0, 1, 1) == 4 );
+
     REQUIRE( cmbv.sub(1, 0, 0) == 8 );
     REQUIRE( cmbv.sub(1, 0, 1) == 3 );
 }
 
 TEST_CASE( "as_banded_padded", "[ColMajBlockDiagMatrixView]" ) {
-    const int blockw = 2;
-    const int nblocks = 3;
-    const int ndiag = 1;
-    const int ld = blockw;
+    constexpr int blockw = 2;
+    constexpr int nblocks = 3;
+    constexpr int ndiag = 1;
+    constexpr int nsat = 0;
+    constexpr int ld = blockw;
     // 5 3 2 # # #
     // 5 8 # 3 # #
     // 1 # 8 4 4 #
     // # 2 4 4 # 5
     // # # 3 # 6 9
     // # # # 4 2 7
-    std::array<double, blockw*blockw*nblocks + 2*blockw*nblocks> data {{5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
+    std::array<double, blockw*blockw*nblocks + 2*blockw*(nblocks-1)> data {{5, 5, 3, 8,
+                8, 4, 4, 4,
+                6, 2, 9, 7,
                 1, 2, 3, 4,
                 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, ld};
+    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
     auto banded = cmbdv.as_banded_padded();
 
 //   0   7  14  21  28  35

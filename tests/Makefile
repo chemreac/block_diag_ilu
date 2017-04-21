@@ -1,6 +1,6 @@
 CXX ?= g++
 LIBS ?= -llapack
-CXXFLAGS ?= -std=c++14 -Wall -Wextra -Werror -pedantic -DBLOCK_DIAG_ILU_UNIT_TEST -g -ggdb
+CXXFLAGS ?= -std=c++14 -Wall -Wextra -Werror -pedantic -DBLOCK_DIAG_ILU_UNIT_TEST -g -ggdb -O0
 CXXFLAGS += $(EXTRA_FLAGS)
 INCLUDE ?= -I../include -I../external/anyode/include
 DEFINES ?=

@@ -27,6 +27,8 @@ namespace block_diag_ilu {
                                           const int lda, int * const __restrict__ ipiv) noexcept;
 #endif
 
+    constexpr int nouter_(int blockw, int ndiag) { return (ndiag == 0) ? blockw-1 : blockw*ndiag; }
+
     void rowpiv2rowbycol(int n, const int * const piv, int * const rowbycol) {
         for (int i = 0; i < n; ++i)
             rowbycol[i] = i;
@@ -54,7 +56,7 @@ namespace block_diag_ilu {
 #define TOP(si, bi, ci, blkw, nblk) blkw*bi + ci, blkw*(nblk + bi - si - 1) + ci
 #define DIM nblocks*blockw
 
-#define GET_(ri, ci) this->m_data[ci*(this->m_ld) + ri]
+#define GET_(ri, ci) this->m_data[(ci)*(this->m_ld) + ri]
 #define GET(...) GET_(__VA_ARGS__)
     template <typename Real_t = double>
     struct BlockDenseView : public DenseMatrixView<Real_t> {
@@ -72,8 +74,8 @@ namespace block_diag_ilu {
 #undef GET
 #undef GET_
 
-#define NOUTER (blockw*(ndiag + 1) - 1)
-#define GET_(ri, ci) this->m_data[this->m_kl + this->m_ku + ri - ci + ci*this->m_ld]
+#define NOUTER nouter_(blockw, ndiag)
+#define GET_(ri, ci) this->m_data[this->m_kl + this->m_ku + ri + (ci)*(this->m_ld-1)]
 #define GET(...) GET_(__VA_ARGS__)
 
     template <typename Real_t = double>
@@ -113,7 +115,11 @@ namespace block_diag_ilu {
             MatrixView<Real_t>(data, DIM, DIM, LD, TOT_NDATA),
             m_nblocks(nblocks), m_blockw(blockw), m_ndiag(ndiag), m_nsat(nsat),
             m_blk_ndata(BLK_NDATA), m_diag_hlf_ndata(DIAG_HLF_NDATA), m_sat_hlf_ndata(SAT_HLF_NDATA)
-            {}
+            {
+                if (data != nullptr and ld == 0){
+                    throw std::runtime_error("give ld when providing data pointer.");
+                }
+            }
         ColMajBlockDiagMatrixView(const MatrixView<Real_t>& source,
                                   const int nblocks,
                                   const int blockw,
@@ -240,7 +246,16 @@ namespace block_diag_ilu {
                 }
             }
         }
+        virtual bool guaranteed_zero_index(const int ri, const int ci) const override {
+            try {
+                (*const_cast<ColMajBlockDiagMatrixView<Real_t>*>(this))(ri, ci);
+            } catch (...){
+                return true;
+            }
+            return false;
+        }
         bool valid_index(const int ri, const int ci) {
+
             try {
                 (*this)(ri, ci);
             } catch (...) {
@@ -355,28 +370,20 @@ namespace block_diag_ilu {
             }
             return off_diag_factor / (blkw * (nblk - 1 - di) * 2);
         }
-        // buffer_t<Real_t> to_banded() const {
-        //     const auto ntr = m_blockw-1 + m_ndiag*(m_blockw);
-        //     const auto ld_result = 3*ntr+1;  // Padded LAPACK
-        //     const int dm = m_blockw*m_nblocks;
-        //     auto result = buffer_factory<Real_t>(ld_result*dm);
-        //     for (int ci = 0; ci < dm; ++ci){
-        //         const int row_lower = (ci < ntr) ? 0 : ci - ntr;
-        //         const int row_upper = (ci + ntr + 1 > dm) ? dm : ci + ntr + 1;
-        //         for (int ri=row_lower; ri<row_upper; ++ri){
-        //             result[ld_result*ci + 2*ntr + ri - ci] = (*this)(ri, ci);
-        //         }
-        //     }
-        //     return result;
-        // }
         DenseMatrixView<Real_t> as_dense() const {
             const int dim = m_blockw*m_nblocks;
             return DenseMatrixView<Real_t>(*this, dim, dim, dim);
         }
         BandedPaddedMatrixView<Real_t> as_banded_padded(const int ld=0) const {
-            const int nouter = m_blockw-1 + m_blockw*m_ndiag;
+            const int nouter = nouter_(m_blockw, m_ndiag);
             return BandedPaddedMatrixView<Real_t>(*this, nouter, nouter, ld);
         }
+        BlockBandedView<Real_t> as_block_banded() const {
+            auto bbv = BlockBandedView<Real_t>(nullptr, m_nblocks, m_blockw, m_ndiag);
+            bbv.read(*this);
+            return bbv;
+        }
+
 #if defined(BLOCK_DIAG_ILU_PY)
         // Cython work around: https://groups.google.com/forum/#!topic/cython-users/j58Sp3QMrD4
         void set_block(const int blocki, const int rowi,
