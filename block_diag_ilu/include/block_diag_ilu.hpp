@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm> // std::max
+#include <memory> // std::unique_ptr
 #include <type_traits>
 #include <utility>
 #include <cmath> // std::abs for float and double, std::sqrt, std::isnan
@@ -14,6 +15,8 @@
 #endif
 
 namespace block_diag_ilu {
+    using std::unique_ptr;
+    using std::make_unique;
     using AnyODE::buffer_t;
     using AnyODE::buffer_ptr_t;
     using AnyODE::buffer_factory;
@@ -370,16 +373,16 @@ namespace block_diag_ilu {
             }
             return off_diag_factor / (blkw * (nblk - 1 - di) * 2);
         }
-        DenseMatrixView<Real_t> as_dense() const {
+        auto as_dense() const {
             const int dim = m_blockw*m_nblocks;
-            return DenseMatrixView<Real_t>(*this, dim, dim, dim);
+            return make_unique<DenseMatrixView<Real_t> >(*this, dim, dim, dim);
         }
-        BandedPaddedMatrixView<Real_t> as_banded_padded(const int ld=0) const {
+        auto as_banded_padded(const int ld=0) const {
             const int nouter = nouter_(m_blockw, m_ndiag);
-            return BandedPaddedMatrixView<Real_t>(*this, nouter, nouter, ld);
+            return make_unique<BandedPaddedMatrixView<Real_t> >(*this, nouter, nouter, ld);
         }
-        BlockBandedView<Real_t> as_block_banded() const {
-            auto bbv = BlockBandedView<Real_t>(nullptr, m_nblocks, m_blockw, m_ndiag);
+        auto as_block_banded() const {
+            auto bbv = make_unique<BlockBandedView<Real_t> >(nullptr, m_nblocks, m_blockw, m_ndiag);
             bbv.read(*this);
             return bbv;
         }
@@ -388,32 +391,27 @@ namespace block_diag_ilu {
         // Cython work around: https://groups.google.com/forum/#!topic/cython-users/j58Sp3QMrD4
         void set_block(const int blocki, const int rowi,
                        const int coli, Real_t value) const noexcept {
-            self.block(blocki, rowi, coli) = value;
+            this->block(blocki, rowi, coli) = value;
         }
         void set_sub(const int diagi, const int blocki,
                      const int coli, Real_t value) const noexcept {
-            const auto& self = *static_cast<const T*>(this);  // CRTP
-            self.sub(diagi, blocki, coli) = value;
+            this->sub(diagi, blocki, coli) = value;
         }
         void set_sup(const int diagi, const int blocki,
                      const int coli, Real_t value) const noexcept {
-            const auto& self = *static_cast<const T*>(this);  // CRTP
-            self.sup(diagi, blocki, coli) = value;
+            this->sup(diagi, blocki, coli) = value;
         }
         void set_sat(const int sati, const int blocki,
                      const int coli, Real_t value) const noexcept {
-            const auto& self = *static_cast<const T*>(this);  // CRTP
-            self.sat(sati, blocki, coli) = value;
+            this->sat(sati, blocki, coli) = value;
         }
         void set_bot(const int sati, const int blocki,
                      const int coli, Real_t value) const noexcept {
-            const auto& self = *static_cast<const T*>(this);  // CRTP
-            self.bot(sati, blocki, coli) = value;
+            this->bot(sati, blocki, coli) = value;
         }
         void set_top(const int sati, const int blocki,
                      const int coli, Real_t value) const noexcept {
-            const auto& self = *static_cast<const T*>(this);  // CRTP
-            self.top(sati, blocki, coli) = value;
+            this->top(sati, blocki, coli) = value;
         }
 #endif
     };

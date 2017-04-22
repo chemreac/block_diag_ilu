@@ -2,6 +2,9 @@
 #include <stdlib.h>  // aligned_alloc & free
 #include <stdint.h> // uintptr_t
 #include <cstring>  // std::memset
+
+#include "anyode/anyode_blas_lapack.hpp"
+
 namespace AnyODE {
     template<typename Real_t> class MatrixView;
 

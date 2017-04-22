@@ -2,20 +2,21 @@
 # -*- mode: cython -*-
 # distutils: language = c++
 
+from libcpp.memory cimport unique_ptr
 cimport numpy as cnp
 from cython.operator cimport dereference as deref
-from block_diag_ilu cimport ColMajBlockDiagMatrixView, ILU, LU
+from block_diag_ilu cimport ColMajBlockDiagMatrixView, ILU, BandedPaddedMatrixView, BandedLU
 
 import numpy as np
 from .datastruct import alloc_compressed, diag_data_len
 
 
-cdef class Compressed:
+cdef class PyColMajBlockDiagMatrixView:
     cdef ColMajBlockDiagMatrixView[double] *thisptr
     #cdef public double[::1] data
 
     def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0):
-        self.view = new ColMajBlockDiagView[double](NULL, nblocks, blockw, ndiag, nsat)
+        self.thisptr = new ColMajBlockDiagMatrixView[double](NULL, nblocks, blockw, ndiag, nsat)
 
     @property
     def data(self):
@@ -25,58 +26,59 @@ cdef class Compressed:
         return arr
 
     def __dealloc__(self):
-        del self.view
+        del self.thisptr
 
     @property
     def nsat(self):
-        return self.view.m_nsat
+        return self.thisptr.m_nsat
 
     def get_block(self, bi, ri, ci):
-        return self.view.block(bi, ri, ci)
+        return self.thisptr.block(bi, ri, ci)
 
     def get_sub(self, di, bi, ci):
-        return self.view.sub(di, bi, ci)
+        return self.thisptr.sub(di, bi, ci)
 
     def get_sup(self, di, bi, ci):
-        return self.view.sup(di, bi, ci)
+        return self.thisptr.sup(di, bi, ci)
 
     def get_bot(self, si, bi, ci):
-        return self.view.bot(si, bi, ci)
+        return self.thisptr.bot(si, bi, ci)
 
     def get_top(self, si, bi, ci):
-        return self.view.top(si, bi, ci)
+        return self.thisptr.top(si, bi, ci)
 
     def set_block(self, bi, ri, ci, value):
-        self.view.set_block(bi, ri, ci, value)
+        self.thisptr.set_block(bi, ri, ci, value)
 
     def set_sub(self, di, bi, ci, value):
-        self.view.set_sub(di, bi, ci, value)
+        self.thisptr.set_sub(di, bi, ci, value)
 
     def set_sup(self, di, bi, ci, value):
-        self.view.set_sup(di, bi, ci, value)
+        self.thisptr.set_sup(di, bi, ci, value)
 
     def set_bot(self, si, bi, ci, value):
-        self.view.set_bot(si, bi, ci, value)
+        self.thisptr.set_bot(si, bi, ci, value)
 
     def set_top(self, si, bi, ci, value):
-        self.view.set_top(si, bi, ci, value)
+        self.thisptr.set_top(si, bi, ci, value)
 
     def dot_vec(self, cnp.ndarray[cnp.float64_t, ndim=1, mode='c'] vec):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] out = np.empty(vec.size)
-        self.view.dot_vec(&vec[0], &out[0])
+        self.thisptr.dot_vec(&vec[0], &out[0])
         return out
 
-    def scale_diag_add(self, Compressed other, scale, diag_add):
-        self.view.scale_diag_add(deref(other.view), scale, diag_add)
+    def scale_diag_add(self, PyColMajBlockDiagMatrixView other, scale, diag_add):
+        self.thisptr.scale_diag_add(deref(other.thisptr), scale, diag_add)
 
     def to_dense(self):
-        cdef int dim = self.view.m_nblocks*self.view.m_blockw
+        cdef int dim = self.thisptr.m_nblocks*self.thisptr.m_blockw
         cdef cnp.ndarray[cnp.float64_t, ndim=2, mode='c'] A = np.empty((dim, dim))
         for ri in range(dim):
             for ci in range(dim):
-                A[ri, ci] = self.view(ri, ci)
+                A[ri, ci] = deref(self.thisptr)(ri, ci)
         return A
 
+Compressed = PyColMajBlockDiagMatrixView
 
 def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw, ndiag, nsat=0):
     if A.shape[0] != A.shape[1]:
@@ -85,7 +87,7 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
         raise ValueError("A shape does not match nblocks & blockw")
     if ndiag > nblocks - 1:
         raise ValueError("too many diagonals")
-    cmprs = Compressed(nblocks, blockw, ndiag, nsat)
+    cmprs = PyColMajBlockDiagMatrixView(nblocks, blockw, ndiag, nsat)
     for bi in range(nblocks):
         for ci in range(blockw):
             for ri in range(blockw):
@@ -104,7 +106,7 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
 
 
 def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, blockw, ndiag):
-    cdef Compressed cmprs = Compressed(nblocks, blockw, ndiag)
+    cdef PyColMajBlockDiagMatrixView cmprs = PyColMajBlockDiagMatrixView(nblocks, blockw, ndiag)
     if (data.size != cmprs.data.size):
         raise ValueError('Incompatible sizes')
 
@@ -125,8 +127,8 @@ cdef _check_solve_flag(int flag, int N):
 cdef class PyILU:
     cdef ILU[double] *thisptr
 
-    def __cinit__(self, Compressed cmprs):
-        self.thisptr = new ILU[double](deref(cmprs.view))
+    def __cinit__(self, PyColMajBlockDiagMatrixView cmprs):
+        self.thisptr = new ILU[double](deref(cmprs.thisptr))
 
     def __dealloc__(self):
         del self.thisptr
@@ -138,10 +140,12 @@ cdef class PyILU:
 
 
 cdef class PyLU:
-    cdef LU[double] *thisptr
+    cdef unique_ptr[BandedPaddedMatrixView[double]] bndv
+    cdef BandedLU[double] *thisptr
 
-    def __cinit__(self, Compressed cmprs):
-        self.thisptr = new LU[double](deref(cmprs.view))
+    def __cinit__(self, PyColMajBlockDiagMatrixView cmprs):
+        self.bndv = cmprs.thisptr.as_banded_padded()
+        self.thisptr = new BandedLU[double](self.bndv.get())
 
     def __dealloc__(self):
         del self.thisptr

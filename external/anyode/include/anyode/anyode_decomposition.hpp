@@ -4,6 +4,7 @@
 
 #include "anyode/anyode_matrix.hpp"
 #include "anyode/anyode_buffer.hpp"
+#include "anyode/anyode_blas_lapack.hpp"
 
 namespace AnyODE {
 

@@ -364,29 +364,29 @@ TEST_CASE( "as_banded_padded", "[ColMajBlockDiagMatrixView]" ) {
 //4  5   8   8   4   6   7
 //5  5   #   4   #   2   X
 //6  1   2   3   4   X   X
-    REQUIRE( std::abs((banded.m_data[4] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[5] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[6] - 1)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[4] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[5] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[6] - 1)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded.m_data[10] - 3)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[11] - 8)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[13] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[10] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[11] - 8)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[13] - 2)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded.m_data[16] - 2)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[18] - 8)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[19] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[20] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[16] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[18] - 8)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[19] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[20] - 3)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded.m_data[23] - 3)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[24] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[25] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[27] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[23] - 3)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[24] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[25] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[27] - 4)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded.m_data[30] - 4)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[32] - 6)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[33] - 2)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[30] - 4)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[32] - 6)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[33] - 2)/1e-15) < 1 );
 
-    REQUIRE( std::abs((banded.m_data[37] - 5)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[38] - 9)/1e-15) < 1 );
-    REQUIRE( std::abs((banded.m_data[39] - 7)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[37] - 5)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[38] - 9)/1e-15) < 1 );
+    REQUIRE( std::abs((banded->m_data[39] - 7)/1e-15) < 1 );
 }
