@@ -6,7 +6,7 @@ import numpy as np
 import scipy.linalg
 
 if os.environ.get("USE_FAST_FAKELU", "0") == "1":
-    print("Print using C++ extension for FakeLU")
+    print("Using C++ extension for FakeLU")
     from fakelu import fast_FakeLU as FakeLU
 else:
     from fakelu import FakeLU

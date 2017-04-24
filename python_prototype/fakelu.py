@@ -1,18 +1,19 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-
+import os
 import numpy as np
 import scipy.linalg
 from warnings import warn
 
 # Here comes the fast implementation:
-# try:
-from _block_diag_ilu import PyILU
-# except ImportError:
-#     # You better not use fast_FakeLU()...
-#     warn("Using slow FakeLU")
-#     class PyILU:
-#         pass
+try:
+    from _block_diag_ilu import PyILU
+except ImportError:
+    if os.environ.get("USE_FAST_FAKELU", "0") == "1":
+        # You better not use fast_FakeLU()...
+        raise
+    class PyILU:
+        pass
 
 class ILU:
 
