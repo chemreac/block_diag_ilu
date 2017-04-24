@@ -134,9 +134,11 @@ cdef _check_solve_flag(int flag, int N):
 
 cdef class PyILU:
     cdef ILU[double] *thisptr
+    cdef PyColMajBlockDiagMatrixView pcmbdmv
 
     def __cinit__(self, PyColMajBlockDiagMatrixView cmprs):
-        self.thisptr = new ILU[double](deref(cmprs.thisptr))
+        self.pcmbdmv = cmprs
+        self.thisptr = new ILU[double](deref(self.pcmbdmv.thisptr))
 
     def __dealloc__(self):
         del self.thisptr
