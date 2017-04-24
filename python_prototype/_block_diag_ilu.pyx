@@ -13,8 +13,6 @@ from cython.operator cimport dereference as deref
 cdef class PyILU:
     cdef ILU[double] *thisptr
     cdef ColMajBlockDiagMatrixView[double] *viewptr
-    cdef double[::1, :] A
-    cdef double[::1] sup, sub
     cdef public int nblocks, blockw, ndiag
 
     def __cinit__(self,
@@ -68,7 +66,11 @@ cdef class PyILU:
         del self.viewptr
 
     def get_LU(self):
-        return self.A
+        cdef cnp.ndarray[cnp.float64_t, ndim=1, mode='fortran'] LU = np.empty((self.ny*self.blockw),
+                                                                              order='F')
+        for i in range(LU.size):
+            LU[i] = self.viewptr.m_data[i]
+        return LU
 
     def solve(self, double[::1] b):
         cdef cnp.ndarray[cnp.float64_t, ndim=1] x = np.empty(b.size)

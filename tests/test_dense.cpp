@@ -5,7 +5,7 @@
 #include <array>
 #include <cmath>
 
-TEST_CASE( "block_sub_sup", "[DenseView]" ) {
+TEST_CASE( "block_sub_sup", "[BlockDenseMatrix]" ) {
     // 1 2 3 0 4 0
     // 5 6 0 7 0 8
     // 9 0 1 2 3 0
@@ -17,7 +17,7 @@ TEST_CASE( "block_sub_sup", "[DenseView]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    auto cmdv = block_diag_ilu::BlockDenseView<double>((double*)arr.data(), nblocks, blockw, ndiag);  // col maj
+    auto cmdv = block_diag_ilu::BlockDenseMatrix<double>((double*)arr.data(), nblocks, blockw, ndiag);  // col maj
     REQUIRE( cmdv.m_ld == 6 );
     for (auto i=0; i<2; ++i){
         REQUIRE( cmdv.block(i, 0, 0) == 1 );

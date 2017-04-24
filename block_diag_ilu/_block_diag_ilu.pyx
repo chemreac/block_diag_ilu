@@ -5,18 +5,18 @@
 from libcpp.memory cimport unique_ptr
 cimport numpy as cnp
 from cython.operator cimport dereference as deref
-from block_diag_ilu cimport ColMajBlockDiagMatrixView, ILU, BandedPaddedMatrixView, BandedLU
+from block_diag_ilu cimport BlockDiagMatrix, ILU, BandedMatrix, BandedLU
 
 import numpy as np
 from .datastruct import alloc_compressed, diag_data_len
 
 
-cdef class PyColMajBlockDiagMatrixView:
-    cdef ColMajBlockDiagMatrixView[double] *thisptr
+cdef class PyBlockDiagMatrix:
+    cdef BlockDiagMatrix[double] *thisptr
     #cdef public double[::1] data
 
     def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0, int ld=0):
-        self.thisptr = new ColMajBlockDiagMatrixView[double](NULL, nblocks, blockw, ndiag, nsat, ld)
+        self.thisptr = new BlockDiagMatrix[double](NULL, nblocks, blockw, ndiag, nsat, ld)
 
     @property
     def data(self):
@@ -67,7 +67,7 @@ cdef class PyColMajBlockDiagMatrixView:
         self.thisptr.dot_vec(&vec[0], &out[0])
         return out
 
-    def scale_diag_add(self, PyColMajBlockDiagMatrixView other, scale, diag_add):
+    def scale_diag_add(self, PyBlockDiagMatrix other, scale, diag_add):
         self.thisptr.scale_diag_add(deref(other.thisptr), scale, diag_add)
 
     def __getitem__(self, key):
@@ -85,7 +85,7 @@ cdef class PyColMajBlockDiagMatrixView:
                 A[ri, ci] = self[ri, ci]
         return A
 
-Compressed = PyColMajBlockDiagMatrixView
+Compressed = PyBlockDiagMatrix
 
 def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw, ndiag, nsat=0):
     if A.shape[0] != A.shape[1]:
@@ -94,7 +94,7 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
         raise ValueError("A shape does not match nblocks & blockw")
     if ndiag > nblocks - 1:
         raise ValueError("too many diagonals")
-    cmprs = PyColMajBlockDiagMatrixView(nblocks, blockw, ndiag, nsat)
+    cmprs = PyBlockDiagMatrix(nblocks, blockw, ndiag, nsat)
     for bi in range(nblocks):
         for ci in range(blockw):
             for ri in range(blockw):
@@ -113,7 +113,7 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
 
 
 def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, blockw, ndiag, nsat, ld):
-    cdef PyColMajBlockDiagMatrixView cmprs = PyColMajBlockDiagMatrixView(
+    cdef PyBlockDiagMatrix cmprs = PyBlockDiagMatrix(
         nblocks, blockw, ndiag, nsat, ld)
     if (data.size != cmprs.data.size):
         raise ValueError('Incompatible sizes')
@@ -134,9 +134,9 @@ cdef _check_solve_flag(int flag, int N):
 
 cdef class PyILU:
     cdef ILU[double] *thisptr
-    cdef PyColMajBlockDiagMatrixView pcmbdmv
+    cdef PyBlockDiagMatrix pcmbdmv
 
-    def __cinit__(self, PyColMajBlockDiagMatrixView cmprs):
+    def __cinit__(self, PyBlockDiagMatrix cmprs):
         self.pcmbdmv = cmprs
         self.thisptr = new ILU[double](deref(self.pcmbdmv.thisptr))
 
@@ -150,10 +150,10 @@ cdef class PyILU:
 
 
 cdef class PyLU:
-    cdef unique_ptr[BandedPaddedMatrixView[double]] bndv
+    cdef unique_ptr[BandedMatrix[double]] bndv
     cdef BandedLU[double] *thisptr
 
-    def __cinit__(self, PyColMajBlockDiagMatrixView cmprs):
+    def __cinit__(self, PyBlockDiagMatrix cmprs):
         self.bndv = cmprs.thisptr.as_banded_padded()
         self.thisptr = new BandedLU[double](self.bndv.get())
 

@@ -28,13 +28,13 @@ TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
                 6, 2, 9, 7,
                 1, 2, 3, 4,
                 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {data.data(), nblocks, blockw, ndiag, nsat, ld};
+    block_diag_ilu::BlockDiagMatrix<double> cmbdv {data.data(), nblocks, blockw, ndiag, nsat, ld};
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
     const int nouter = ndiag*blockw;
-    auto bndv = AnyODE::BandedPaddedMatrixView<double>(cmbdv, nouter, nouter);
+    auto bndv = AnyODE::BandedMatrix<double>(cmbdv, nouter, nouter);
     REQUIRE( bndv.m_kl == 2 );
     REQUIRE( bndv.m_ku == 2 );
     REQUIRE(std::abs(bndv.m_data[4] - 5) < 1e-15);
@@ -90,13 +90,13 @@ TEST_CASE( "solve", "[BandedLU]" ) {
             5, 5, 3, 8, 8, 4, 4, 4, 6, 2, 9, 7,
                 1, 2, 3, 4,
                 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
+    block_diag_ilu::BlockDiagMatrix<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
     const int nouter = ndiag*blockw + blockw - 1;
-    auto bndv = AnyODE::BandedPaddedMatrixView<double>(cmbdv, nouter, nouter);
+    auto bndv = AnyODE::BandedMatrix<double>(cmbdv, nouter, nouter);
     auto lu = AnyODE::BandedLU<double>(&bndv);
     int flag = lu.solve(&b[0], &x[0]);
     REQUIRE( flag == 0 );
@@ -114,7 +114,7 @@ std::array<double, 7*4> get_arr(){
                 }};
 }
 
-block_diag_ilu::BlockBandedView<double> get_cmbv(std::array<double, 28>& arr){
+block_diag_ilu::BlockBandedMatrix<double> get_cmbv(std::array<double, 28>& arr){
     // 0 0 0 0
     // 0 0 0 0
     // 0 0 1 2
@@ -131,10 +131,10 @@ block_diag_ilu::BlockBandedView<double> get_cmbv(std::array<double, 28>& arr){
     const int blockw = 2;
     const int nblocks = 2;
     const int ndiag = 1;
-    return block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
+    return block_diag_ilu::BlockBandedMatrix<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
-TEST_CASE( "global_block", "[ColMajBandedView]" ) {
+TEST_CASE( "global_block", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv(0, 0) == 6 );
@@ -148,7 +148,7 @@ TEST_CASE( "global_block", "[ColMajBandedView]" ) {
     REQUIRE( cmbv(3, 3) == 9 );
 }
 
-TEST_CASE( "global_sub", "[ColMajBandedView]" ) {
+TEST_CASE( "global_sub", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv(2, 0) == 4 );
@@ -156,21 +156,21 @@ TEST_CASE( "global_sub", "[ColMajBandedView]" ) {
 
 }
 
-TEST_CASE( "global_sup", "[ColMajBandedView]" ) {
+TEST_CASE( "global_sup", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv(0, 2) == 1 );
     REQUIRE( cmbv(1, 3) == 2 );
 }
 
-TEST_CASE( "global_non_accessible", "[ColMajBandedView]" ) {
+TEST_CASE( "global_non_accessible", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv(2, 1) == 2 );
     REQUIRE( cmbv(1, 2) == 4 );
 }
 
-TEST_CASE( "block", "[ColMajBandedView]" ) {
+TEST_CASE( "block", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv.m_ld == 7 );
@@ -185,14 +185,14 @@ TEST_CASE( "block", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.block(1, 1, 1) == 9 );
 }
 
-TEST_CASE( "sub", "[ColMajBandedView]" ) {
+TEST_CASE( "sub", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv.sub(0, 0, 0) == 4 );
     REQUIRE( cmbv.sub(0, 0, 1) == 5 );
 }
 
-TEST_CASE( "sup", "[ColMajBandedView]" ) {
+TEST_CASE( "sup", "[BlockBandedMatrix]" ) {
     auto arr = get_arr();
     auto cmbv = get_cmbv(arr);
     REQUIRE( cmbv.sup(0, 0, 0) == 1 );
@@ -208,7 +208,7 @@ std::array<double, 13*6> get_arr2(){
                 0, 0, 0, 8, 0, 7, 2, 6, 0, 0, 0, 0}};
 }
 
-block_diag_ilu::BlockBandedView<double> get_cmbv2(std::array<double, 13*6>& arr){
+block_diag_ilu::BlockBandedMatrix<double> get_cmbv2(std::array<double, 13*6>& arr){
     // 0 0 0 0 0 0
     // 0 0 0 0 0 0
     // 0 0 0 0 0 0
@@ -232,11 +232,11 @@ block_diag_ilu::BlockBandedView<double> get_cmbv2(std::array<double, 13*6>& arr)
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    return block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
+    return block_diag_ilu::BlockBandedMatrix<double>((double*)arr.data(), nblocks, blockw, ndiag);
 }
 
 
-TEST_CASE( "block2", "[ColMajBandedView]" ) {
+TEST_CASE( "block2", "[BlockBandedMatrix]" ) {
     auto arr = get_arr2();
     auto cmbv = get_cmbv2(arr);
     REQUIRE( cmbv.m_ld == 13 );
@@ -256,7 +256,7 @@ TEST_CASE( "block2", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.block(2, 1, 1) == 6 );
 }
 
-TEST_CASE( "sub2", "[ColMajBandedView]" ) {
+TEST_CASE( "sub2", "[BlockBandedMatrix]" ) {
     auto arr = get_arr2();
     auto cmbv = get_cmbv2(arr);
     REQUIRE( cmbv.sub(0, 0, 0) == 9 );
@@ -269,7 +269,7 @@ TEST_CASE( "sub2", "[ColMajBandedView]" ) {
 
 }
 
-TEST_CASE( "sup2", "[ColMajBandedView]" ) {
+TEST_CASE( "sup2", "[BlockBandedMatrix]" ) {
     auto arr = get_arr2();
     auto cmbv = get_cmbv2(arr);
     REQUIRE( cmbv.sup(0, 0, 0) == 3 );
@@ -281,7 +281,7 @@ TEST_CASE( "sup2", "[ColMajBandedView]" ) {
     REQUIRE( cmbv.sup(1, 0, 1) == 8 );
 }
 
-TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
+TEST_CASE( "block_sub_sup__offset", "[BlockBandedMatrix]" ) {
     // 1 2 3 0 4 0
     // 5 6 0 7 0 8
     // 9 0 1 2 3 0
@@ -310,7 +310,7 @@ TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    auto cmbv = block_diag_ilu::BlockBandedView<double>((double*)arr.data(), nblocks, blockw, ndiag);
+    auto cmbv = block_diag_ilu::BlockBandedMatrix<double>((double*)arr.data(), nblocks, blockw, ndiag);
     REQUIRE( cmbv.m_ld == 13 );
     for (auto i=0; i < nblocks; ++i){
         REQUIRE( cmbv.block(i, 0, 0) == 1 );
@@ -335,7 +335,7 @@ TEST_CASE( "block_sub_sup__offset", "[BlockBandedView]" ) {
     REQUIRE( cmbv.sub(1, 0, 1) == 3 );
 }
 
-TEST_CASE( "as_banded_padded", "[ColMajBlockDiagMatrixView]" ) {
+TEST_CASE( "as_banded_padded", "[BlockDiagMatrix]" ) {
     constexpr int blockw = 2;
     constexpr int nblocks = 3;
     constexpr int ndiag = 1;
@@ -352,7 +352,7 @@ TEST_CASE( "as_banded_padded", "[ColMajBlockDiagMatrixView]" ) {
                 6, 2, 9, 7,
                 1, 2, 3, 4,
                 2, 3, 4, 5}};
-    block_diag_ilu::ColMajBlockDiagMatrixView<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
+    block_diag_ilu::BlockDiagMatrix<double> cmbdv {&data[0], nblocks, blockw, ndiag, nsat, ld};
     auto banded = cmbdv.as_banded_padded();
 
 //   0   7  14  21  28  35
