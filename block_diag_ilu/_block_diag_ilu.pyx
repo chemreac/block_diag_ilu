@@ -5,7 +5,7 @@
 from libcpp.memory cimport unique_ptr
 cimport numpy as cnp
 from cython.operator cimport dereference as deref
-from block_diag_ilu cimport BlockDiagMatrix, ILU, BandedMatrix, BandedLU
+from block_diag_ilu cimport BlockDiagMatrix, ILU_inplace, BandedMatrix, BandedLU
 
 import numpy as np
 from .datastruct import alloc_compressed, diag_data_len
@@ -17,6 +17,10 @@ cdef class PyBlockDiagMatrix:
 
     def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0, int ld=0):
         self.thisptr = new BlockDiagMatrix[double](NULL, nblocks, blockw, ndiag, nsat, ld)
+
+    def copy(self):
+        return Compressed_from_data(self.data, self.thisptr.m_nblocks, self.thisptr.m_blockw,
+                                    self.thisptr.m_ndiag, self.thisptr.m_nsat, self.thisptr.m_ld)
 
     @property
     def data(self):
@@ -133,12 +137,12 @@ cdef _check_solve_flag(int flag, int N):
 
 
 cdef class PyILU:
-    cdef ILU[double] *thisptr
-    cdef PyBlockDiagMatrix pcmbdmv
+    cdef ILU_inplace[double] *thisptr
+    cdef PyBlockDiagMatrix pbdm
 
-    def __cinit__(self, PyBlockDiagMatrix cmprs):
-        self.pcmbdmv = cmprs
-        self.thisptr = new ILU[double](deref(self.pcmbdmv.thisptr))
+    def __cinit__(self, PyBlockDiagMatrix pbdm):
+        self.pbdm = pbdm.copy()
+        self.thisptr = new ILU_inplace[double](self.pbdm.thisptr)
 
     def __dealloc__(self):
         del self.thisptr

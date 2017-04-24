@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# -*- mode: cython-mode -*-
+
 from libcpp cimport bool
 from libcpp.memory cimport unique_ptr
 
@@ -15,7 +18,7 @@ cdef extern from "anyode/anyode_decomposition.hpp" namespace "AnyODE":
 
 cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
     cdef cppclass BlockDiagMatrix[T]:
-        int m_nsat, m_blockw, m_nblocks, m_ndata
+        int m_ndata, m_nblocks, m_blockw, m_ndiag, m_nsat, m_ld
         T * m_data
         BlockDiagMatrix(T*, int, int, int, int, int)
         T& block(size_t, int, int)
@@ -35,9 +38,6 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         bool valid_index(int, int)
 
     cdef cppclass ILU_inplace[T]:
-        BlockDiagMatrix[T] m_view
-
-    cdef cppclass ILU[T]:
-        ILU(BlockDiagMatrix[T])
+        BlockDiagMatrix[T]* m_view
+        ILU_inplace(BlockDiagMatrix[T]*)
         int solve(T *, T *)
-        ILU_inplace m_ilu_inplace

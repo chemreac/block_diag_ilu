@@ -6,14 +6,14 @@
 
 cimport numpy as cnp
 import numpy as np
-from block_diag_ilu cimport ColMajBlockDiagMatrixView, ILU
+from block_diag_ilu cimport BlockDiagMatrix, ILU_inplace
 
 from cython.operator cimport dereference as deref
 
 cdef class PyILU:
-    cdef ILU[double] *thisptr
-    cdef ColMajBlockDiagMatrixView[double] *viewptr
-    cdef public int nblocks, blockw, ndiag
+    cdef ILU_inplace[double] *thisptr
+    cdef BlockDiagMatrix[double] *viewptr
+    cdef object _A, _sub, _sup
 
     def __cinit__(self,
                   cnp.ndarray[cnp.float64_t, mode='fortran', ndim=2] A,
@@ -22,17 +22,15 @@ cdef class PyILU:
                   int blockw, int ndiag):
         assert A.shape[0] == blockw
         assert A.shape[1] % blockw == 0
-        self.nblocks = A.shape[1] // blockw
-        self.blockw = blockw
-        self.ndiag = ndiag
-
+        cdef int nblocks = A.shape[1] // blockw
         cdef int diag_len = 0
         for i in range(ndiag):
-            diag_len += (self.nblocks-i-1)*blockw
-        assert sub.size >= diag_len
-        assert sup.size >= diag_len
-        self.viewptr = new ColMajBlockDiagMatrixView[double](
-            NULL, self.nblocks, blockw, ndiag, 0, blockw)
+            diag_len += (nblocks-i-1)*blockw
+        assert sub.size == diag_len
+        assert sup.size == diag_len
+        self._A, self._sub, self._sup = A, sub, sup
+
+        self.viewptr = new BlockDiagMatrix[double](NULL, nblocks, blockw, ndiag, 0, blockw)
         cdef double * Adata = &A[0, 0]
         for i in range(A.size):
             self.viewptr.m_data[i] = Adata[i]
@@ -40,7 +38,20 @@ cdef class PyILU:
             self.viewptr.m_data[A.size + i] = sub[i]
         for i in range(sup.size):
             self.viewptr.m_data[A.size + sub.size + i] = sup[i]
-        self.thisptr = new ILU[double](deref(self.viewptr))
+
+        self.thisptr = new ILU_inplace[double](self.viewptr)
+
+    @property
+    def nblocks(self):
+        return self.viewptr.m_nblocks
+
+    @property
+    def blockw(self):
+        return self.viewptr.m_blockw
+
+    @property
+    def ndiag(self):
+        return self.viewptr.m_ndiag
 
     @property
     def ny(self):
@@ -66,10 +77,11 @@ cdef class PyILU:
         del self.viewptr
 
     def get_LU(self):
-        cdef cnp.ndarray[cnp.float64_t, ndim=1, mode='fortran'] LU = np.empty((self.ny*self.blockw),
-                                                                              order='F')
+        cdef cnp.ndarray[cnp.float64_t, ndim=2, mode='fortran'] LU = np.empty(
+            (self.viewptr.m_ld, self.ny), order='F')
+        cdef double * LUptr = &LU[0, 0]
         for i in range(LU.size):
-            LU[i] = self.viewptr.m_data[i]
+            LUptr[i] = self.viewptr.m_data[i]
         return LU
 
     def solve(self, double[::1] b):
@@ -93,14 +105,14 @@ cdef class PyILU:
         return self.viewptr.sup(di, bi, ci)
 
     def piv_get(self, int idx):
-        return self.thisptr.m_ilu_inplace.m_ipiv[idx] - 1 # Fortran indices starts at 1
+        return self.thisptr.m_ipiv[idx] - 1 # Fortran indices starts at 1
 
     def rowbycol_get(self, int idx):
         if idx > self.nblocks*self.blockw:
             raise ValueError
-        return self.thisptr.m_ilu_inplace.m_rowbycol[idx]
+        return self.thisptr.m_rowbycol[idx]
 
     def colbyrow_get(self, int idx):
         if idx > self.nblocks*self.blockw:
             raise ValueError
-        return self.thisptr.m_ilu_inplace.m_colbyrow[idx]
+        return self.thisptr.m_colbyrow[idx]

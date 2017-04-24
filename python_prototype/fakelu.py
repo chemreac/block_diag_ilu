@@ -133,9 +133,9 @@ def fast_FakeLU(A, n, ndiag=0):
         sub.extend(ssub)
         sup.extend(ssup)
     # memory view taking address of first element workaround:
-    if len(sub) == 0:
-        sub.append(0)
-        sup.append(0)
+    # if len(sub) == 0:
+    #     sub.append(0)
+    #     sup.append(0)
     return ILU(np.asfortranarray(A),
                np.array(sub, dtype=np.float64),
                np.array(sup, dtype=np.float64),
