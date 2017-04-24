@@ -10,6 +10,7 @@ namespace AnyODE {
 
     template<typename Real_t>
     struct DecompositionBase {
+        virtual ~DecompositionBase() {};
         virtual int factorize() = 0;
         virtual int solve(const Real_t * const, Real_t * const) = 0;
     };

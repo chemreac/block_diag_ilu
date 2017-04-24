@@ -15,8 +15,8 @@ cdef class PyColMajBlockDiagMatrixView:
     cdef ColMajBlockDiagMatrixView[double] *thisptr
     #cdef public double[::1] data
 
-    def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0):
-        self.thisptr = new ColMajBlockDiagMatrixView[double](NULL, nblocks, blockw, ndiag, nsat)
+    def __cinit__(self, int nblocks, int blockw, int ndiag, int nsat=0, int ld=0):
+        self.thisptr = new ColMajBlockDiagMatrixView[double](NULL, nblocks, blockw, ndiag, nsat, ld)
 
     @property
     def data(self):
@@ -70,12 +70,19 @@ cdef class PyColMajBlockDiagMatrixView:
     def scale_diag_add(self, PyColMajBlockDiagMatrixView other, scale, diag_add):
         self.thisptr.scale_diag_add(deref(other.thisptr), scale, diag_add)
 
+    def __getitem__(self, key):
+        ri, ci = key
+        if self.thisptr.valid_index(ri, ci):
+            return deref(self.thisptr)(ri, ci)
+        else:
+            return 0.0
+
     def to_dense(self):
         cdef int dim = self.thisptr.m_nblocks*self.thisptr.m_blockw
         cdef cnp.ndarray[cnp.float64_t, ndim=2, mode='c'] A = np.empty((dim, dim))
         for ri in range(dim):
             for ci in range(dim):
-                A[ri, ci] = deref(self.thisptr)(ri, ci)
+                A[ri, ci] = self[ri, ci]
         return A
 
 Compressed = PyColMajBlockDiagMatrixView
@@ -105,14 +112,15 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
     return cmprs
 
 
-def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, blockw, ndiag):
-    cdef PyColMajBlockDiagMatrixView cmprs = PyColMajBlockDiagMatrixView(nblocks, blockw, ndiag)
+def Compressed_from_data(cnp.ndarray[cnp.float64_t, ndim=1] data, nblocks, blockw, ndiag, nsat, ld):
+    cdef PyColMajBlockDiagMatrixView cmprs = PyColMajBlockDiagMatrixView(
+        nblocks, blockw, ndiag, nsat, ld)
     if (data.size != cmprs.data.size):
         raise ValueError('Incompatible sizes')
 
     # cmprs.data[:] = data[:]  # <-- does not work
     for i in range(data.size):
-        cmprs.data[i] = data[i]
+        cmprs.thisptr.m_data[i] = data[i]
     return cmprs
 
 

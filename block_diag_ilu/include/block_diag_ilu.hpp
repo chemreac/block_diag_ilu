@@ -258,7 +258,6 @@ namespace block_diag_ilu {
             return false;
         }
         bool valid_index(const int ri, const int ci) {
-
             try {
                 (*this)(ri, ci);
             } catch (...) {

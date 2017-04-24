@@ -1,3 +1,4 @@
+from libcpp cimport bool
 from libcpp.memory cimport unique_ptr
 
 cdef extern from "anyode/anyode_matrix.hpp" namespace "AnyODE":
@@ -16,7 +17,7 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
     cdef cppclass ColMajBlockDiagMatrixView[T]:
         int m_nsat, m_blockw, m_nblocks, m_ndata
         T * m_data
-        ColMajBlockDiagMatrixView(T*, int, int, int, int)
+        ColMajBlockDiagMatrixView(T*, int, int, int, int, int)
         T& block(size_t, int, int)
         T& sub(int, int, int)
         T& sup(int, int, int)
@@ -31,6 +32,7 @@ cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
         void set_bot(int, int, int, T)
         void set_top(int, int, int, T)
         unique_ptr[BandedPaddedMatrixView[T]] as_banded_padded()
+        bool valid_index(int, int)
 
     cdef cppclass ILU_inplace[T]:
         ColMajBlockDiagMatrixView[T] m_view

@@ -33,13 +33,23 @@ def _get_A_data():
         .2, -.1, .1, .05, .03, .04,
         .1, .5, 1, -.1, .01, .02])
 
+def test_Compressed_to_dense():
+    A = _get_A()
+    cmprs = Compressed_from_dense(A, 3, 2, 2)
+    assert np.allclose(cmprs.to_dense(), A)
 
 def test_Compressed_from_data():
     b = np.array([-7, 3, 5, -4, 6, 1.5])
-    lu, piv = scipy.linalg.lu_factor(_get_A())
+    A = _get_A()
+    lu, piv = scipy.linalg.lu_factor(A)
     x = scipy.linalg.lu_solve((lu, piv), b)
 
-    cmprs = Compressed_from_data(_get_A_data(), 3, 2, 2)
+    cmprs_data = _get_A_data()
+    cmprs = Compressed_from_data(cmprs_data, 3, 2, 2, 0, 2)
+    for idx, val in np.ndenumerate(A):
+        if val != 0:
+            assert A[idx] == cmprs[idx]
+
     ilu = ILU(cmprs)
     ix = ilu.solve(b)
     assert np.allclose(x, ix, rtol=0.05, atol=1e-6)
@@ -102,7 +112,7 @@ def test_ILU_solve__sattelites():
 
 
 def test_Compressed_dot_vec():
-    cmprs = Compressed_from_data(_get_A_data(), 3, 2, 2)
+    cmprs = Compressed_from_data(_get_A_data(), 3, 2, 2, 0, 2)
     A = _get_A()
     v = np.array([3, -2, 1, 5, 7, -6], dtype=np.float64)
     result = cmprs.dot_vec(v)
