@@ -18,12 +18,12 @@ def test_get_include():
 
 def _get_A():
     return np.array([
-        [9   , 3   , .1 , 0   , .01 , 0]   ,  # noqa
-        [-4  , 18  , 0  , .5  , 0   , .02] ,  # noqa
-        [.2  , 0   , 7  , -2  , 1   , 0]   ,  # noqa
-        [0   , -.1 , 3  , 5   , 0   , -.1] ,  # noqa
-        [.03 , 0   , .1 , 0   , -9  , 2]   ,  # noqa
-        [0   , .04 , 0  , .05 , -3  , 7]      # noqa
+        [9, 3, .1, 0, .01, 0],
+        [-4, 18, 0, .5, 0, .02],
+        [.2, 0, 7, -2, 1, 0],
+        [0, -.1, 3, 5, 0, -.1],
+        [.03, 0, .1, 0, -9, 2],
+        [0, .04, 0, .05, -3, 7]
     ])
 
 
@@ -33,10 +33,12 @@ def _get_A_data():
         .2, -.1, .1, .05, .03, .04,
         .1, .5, 1, -.1, .01, .02])
 
+
 def test_Compressed_to_dense():
     A = _get_A()
     cmprs = Compressed_from_dense(A, 3, 2, 2)
     assert np.allclose(cmprs.to_dense(), A)
+
 
 def test_Compressed_from_data():
     b = np.array([-7, 3, 5, -4, 6, 1.5])
@@ -110,7 +112,6 @@ def test_ILU_solve__sattelites():
     assert np.allclose(ref, ilux, rtol=0.05, atol=1e-6)
 
 
-
 def test_Compressed_dot_vec():
     cmprs = Compressed_from_data(_get_A_data(), 3, 2, 2, 0, 2)
     A = _get_A()
@@ -127,7 +128,6 @@ def test_Compressed_dot_vec__sattelites():
     result = cmprs.dot_vec(v)
     ref = A.dot(v)
     assert np.allclose(ref, result)
-
 
 
 def _get_test_m1():
