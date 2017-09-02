@@ -2,7 +2,9 @@
 **.so
 **.cache
 tests/catch.hpp
-tests/test_block_diag_ilu
+tests/test_block_diag
+tests/test_dense
+tests/test_banded
 python_prototype/_block_diag_ilu.cpp
 block_diag_ilu/_block_diag_ilu.cpp
 python_prototype/build

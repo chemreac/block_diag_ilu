@@ -1,5 +1,5 @@
 {% set name = "block_diag_ilu" %}
-{% set version = "0.2.3+git" %}
+{% set version = "0.3.0.dev0+git" %}
 {% set variant = "openblas" %}
 
 package:

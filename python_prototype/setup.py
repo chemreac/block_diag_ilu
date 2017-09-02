@@ -8,13 +8,13 @@ import numpy as np
 
 if __name__ == '__main__':
     kwargs = {
-        'include_dirs': ['../include', np.get_include()],
+        'include_dirs': ['../include', np.get_include(), '../external/anyode/include'],
         'extra_compile_args': ['-std=c++14', '-DBLOCK_DIAG_ILU_UNIT_TEST'],
         'extra_link_args': [],
         'language': 'c++'
     }
-    if os.environ.get('BLOCK_DIAG_ILU_WITH_DGETRF', '0') == '1':
-        kwargs['extra_compile_args'] += ['-DBLOCK_DIAG_ILU_WITH_DGETRF']
+    if os.environ.get('BLOCK_DIAG_ILU_WITH_GETRF', '0') == '1':
+        kwargs['extra_compile_args'] += ['-DBLOCK_DIAG_ILU_WITH_GETRF']
     else:
         kwargs['libraries'] = ['lapack']
 
