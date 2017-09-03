@@ -248,6 +248,9 @@ namespace block_diag_ilu {
                 }
             }
         }
+        const Real_t& operator()(int ri, int ci) const {
+            return (*const_cast<BlockDiagMatrix<Real_t>* >(this))(ri, ci);
+        }
         virtual bool guaranteed_zero_index(const int ri, const int ci) const override {
             try {
                 (*const_cast<BlockDiagMatrix<Real_t>*>(this))(ri, ci);

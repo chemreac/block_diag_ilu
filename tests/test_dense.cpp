@@ -17,7 +17,8 @@ TEST_CASE( "block_sub_sup", "[BlockDenseMatrix]" ) {
     const int blockw = 2;
     const int nblocks = 3;
     const int ndiag = 2;
-    auto cmdv = block_diag_ilu::BlockDenseMatrix<double>((double*)arr.data(), nblocks, blockw, ndiag);  // col maj
+    const int ld = 6;
+    auto cmdv = block_diag_ilu::BlockDenseMatrix<double>((double*)arr.data(), nblocks, blockw, ndiag, ld, true);  // col maj
     REQUIRE( cmdv.m_ld == 6 );
     for (auto i=0; i<2; ++i){
         REQUIRE( cmdv.block(i, 0, 0) == 1 );
