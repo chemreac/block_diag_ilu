@@ -29,17 +29,26 @@ TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
                 1, 2, 3, 4,
                 2, 3, 4, 5}};
     block_diag_ilu::BlockDiagMatrix<double> cmbdv {data.data(), nblocks, blockw, ndiag, nsat, ld};
+    REQUIRE( cmbdv.m_ld == ld );
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
     std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
     const int nouter = ndiag*blockw;
     auto bndv = AnyODE::BandedMatrix<double>(cmbdv, nouter, nouter);
+    REQUIRE( bndv.m_ld == 3*blockw + 1 );
     REQUIRE( bndv.m_kl == 2 );
     REQUIRE( bndv.m_ku == 2 );
     REQUIRE(std::abs(bndv.m_data[4] - 5) < 1e-15);
+    REQUIRE(std::abs(bndv.m_data[5] - 5) < 1e-15);
+    REQUIRE(std::abs(bndv.m_data[10] - 3) < 1e-15);
+    REQUIRE(std::abs(bndv.m_data[11] - 8) < 1e-15);
+    REQUIRE(std::abs(bndv.m_data[12] - 0) < 1e-15);
+    REQUIRE(std::abs(bndv.m_data[13] - 2) < 1e-15);
 
     auto lu = AnyODE::BandedLU<double>(&bndv);
+    int flag = lu.factorize();
+    REQUIRE( flag == 0 );
 // array([[  5.00000000e+00,   3.00000000e+00,   2.00000000e+00,   0.00000000e+00,   0.00000000e+00,   0.00000000e+00],
 //        [  1.00000000e+00,   5.00000000e+00,  -2.00000000e+00,   3.00000000e+00,   0.00000000e+00,   0.00000000e+00],
 //        [  2.00000000e-01,  -1.20000000e-01,   7.36000000e+00,   4.36000000e+00,   4.00000000e+00,   0.00000000e+00],
@@ -58,6 +67,9 @@ TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
 //5   1   -0.12  0           -0.444293478 -0.491989664 X
 //6   0.2  0     0.407608696 -.0108695652  X           X
 
+    REQUIRE( lu.m_ipiv[0] == 1 );
+    REQUIRE( lu.m_ipiv[1] == 2 );
+    REQUIRE( lu.m_ipiv[2] == 3 );
     // only check first three rows (row swapping)
 
     REQUIRE( std::abs((lu.m_view->m_data[4] - 5)/1e-15) < 1 );
@@ -98,7 +110,9 @@ TEST_CASE( "solve", "[BandedLU]" ) {
     const int nouter = ndiag*blockw + blockw - 1;
     auto bndv = AnyODE::BandedMatrix<double>(cmbdv, nouter, nouter);
     auto lu = AnyODE::BandedLU<double>(&bndv);
-    int flag = lu.solve(&b[0], &x[0]);
+    int flag = lu.factorize();
+    REQUIRE( flag == 0 );
+    flag = lu.solve(&b[0], &x[0]);
     REQUIRE( flag == 0 );
     for (int idx=0; idx<blockw*nblocks; ++idx){
         REQUIRE( std::abs((x[idx] - xref[idx])/1e-14) < 1 );

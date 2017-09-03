@@ -15,6 +15,7 @@ cdef extern from "anyode/anyode_decomposition.hpp" namespace "AnyODE":
     cdef cppclass BandedLU[T]:
         BandedLU(BandedMatrix[T]*)
         int solve(T *, T *)
+        int factorize()
 
 cdef extern from "block_diag_ilu.hpp" namespace "block_diag_ilu":
     cdef cppclass BlockDiagMatrix[T]:

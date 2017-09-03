@@ -160,6 +160,7 @@ cdef class PyLU:
     def __cinit__(self, PyBlockDiagMatrix cmprs):
         self.bndv = cmprs.thisptr.as_banded_padded()
         self.thisptr = new BandedLU[double](self.bndv.get())
+        self.thisptr.factorize()
 
     def __dealloc__(self):
         del self.thisptr
