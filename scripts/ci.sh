@@ -5,9 +5,9 @@ fi
 ./scripts/get_external.sh
 (
     cd tests
-    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-3.8/bin/llvm-symbolizer
+    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-5.0/bin/llvm-symbolizer
     export ASAN_OPTIONS=symbolize=1
-    make clean; make CXX=clang++-3.8 EXTRA_FLAGS="-fsanitize=address"
+    make clean; make CXX=clang++-5.0 EXTRA_FLAGS="-fsanitize=address"
     make clean; make DEFINES=-D_GLIBCXX_DEBUG
     make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
     make clean; make test_block_diag_omp

@@ -2,10 +2,16 @@
 #include <stdlib.h>  // aligned_alloc & free
 #include <stdint.h> // uintptr_t
 #include <cstring>  // std::memset
+#include <stdexcept> // std::runtime_error
 
 #include "anyode/anyode_blas_lapack.hpp"
 
 namespace AnyODE {
+    template<typename T> constexpr std::size_t n_padded(std::size_t n, int alignment_bytes){
+        return ((n*sizeof(T) + alignment_bytes - 1) & ~(alignment_bytes - 1)) / sizeof(T);
+    }
+    static constexpr int alignment_bytes_ = 64; // L1 cache line
+
     template<typename Real_t> class MatrixBase;
 
     template<typename Real_t>
@@ -18,9 +24,7 @@ namespace AnyODE {
             return static_cast<Real_t *>(m_array_);
         }
     public:
-        static constexpr int alignment_bytes_ = 64;
-        static constexpr int alignment_items_ = alignment_bytes_/sizeof(Real_t);
-        static_assert(sizeof(Real_t) <= alignment_bytes_, "unhandled situation");
+
         Real_t * m_data;
         int m_nr, m_nc, m_ld, m_ndata;
         bool m_own_data;
@@ -40,14 +44,14 @@ namespace AnyODE {
             if (m_own_data and m_data)
                 free(m_data);
         }
-        virtual Real_t& operator()(int ri, int ci) = 0;
+        virtual Real_t& operator()(int /* ri */, int /* ci */) { throw std::runtime_error("Not implemented."); };
         const Real_t& operator()(int ri, int ci) const { return (*const_cast<MatrixBase<Real_t>* >(this))(ri, ci); }
-        bool valid_index(const int ri, const int ci) const {
+        virtual bool valid_index(const int ri, const int ci) const {
             return (0 <= ri) and (ri < this->m_nr) and (0 <= ci) and (ci < this->m_nc);
         }
-        virtual bool guaranteed_zero_index(int ri, int ci) const = 0;
-        virtual void dot_vec(const Real_t * const, Real_t * const) = 0;
-        virtual void set_to_eye_plus_scaled_mtx(Real_t, const MatrixBase&) = 0;
+        virtual bool guaranteed_zero_index(int /* ri */, int /* ci */) const { throw std::runtime_error("Not implemented."); };
+        virtual void dot_vec(const Real_t * const, Real_t * const) { throw std::runtime_error("Not implemented."); };
+        virtual void set_to_eye_plus_scaled_mtx(Real_t, const MatrixBase&) { throw std::runtime_error("Not implemented."); };
         void set_to(Real_t value) noexcept { std::memset(m_data, value, m_ndata*sizeof(Real_t)); }
     };
 
@@ -97,13 +101,13 @@ namespace AnyODE {
         }
     };
 
-    constexpr int banded_padded_ld_(int kl, int ku) { return 2*kl+ku+1; }
+    constexpr int banded_padded_ld(int kl, int ku) { return 2*kl+ku+1; }
 
     template<typename Real_t = double>
     struct BandedMatrix : public MatrixBase<Real_t> {
         int m_kl, m_ku;
         static constexpr bool m_colmaj = true;  // dgbmv takes a trans arg, but not used at the moment.
-#define LD (ld ? ld : banded_padded_ld_(kl, ku))
+#define LD (ld ? ld : banded_padded_ld(kl, ku))
         BandedMatrix(Real_t * const data, int nr, int nc, int kl, int ku, int ld=0, bool own_data=false) :
             MatrixBase<Real_t>(data, nr, nc, LD, LD*nc, own_data),
             m_kl(kl), m_ku(ku)

@@ -1,3 +1,8 @@
+v0.3.1
+======
+- Bumpy AnyODE
+- Make helper functions inline (avoid multiple definition)
+
 v0.3.0
 ======
 - Use int throughout instead of unsigned and size_t.

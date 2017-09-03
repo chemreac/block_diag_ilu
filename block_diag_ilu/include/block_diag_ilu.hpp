@@ -32,7 +32,7 @@ namespace block_diag_ilu {
 
     constexpr int nouter_(int blockw, int ndiag) { return (ndiag == 0) ? blockw-1 : blockw*ndiag; }
 
-    void rowpiv2rowbycol(int n, const int * const piv, int * const rowbycol) {
+    inline void rowpiv2rowbycol(int n, const int * const piv, int * const rowbycol) {
         for (int i = 0; i < n; ++i)
             rowbycol[i] = i;
         for (int i=0; i<n; ++i){
@@ -41,7 +41,7 @@ namespace block_diag_ilu {
         }
     }
 
-    void rowbycol2colbyrow(int n, const int * const rowbycol, int * const colbyrow){
+    inline void rowbycol2colbyrow(int n, const int * const rowbycol, int * const colbyrow){
         for (int i=0; i<n; ++i){
             for (int j=0; j<n; ++j){
                 if (rowbycol[j] == i){
@@ -64,8 +64,8 @@ namespace block_diag_ilu {
     template <typename Real_t = double>
     struct BlockDenseMatrix : public DenseMatrix<Real_t> {
         const int m_nblocks, m_blockw, m_ndiag;
-        BlockDenseMatrix(Real_t * const data, const int nblocks, const int blockw, const int ndiag) :
-            DenseMatrix<Real_t>(data, DIM, DIM, DIM),
+        BlockDenseMatrix(Real_t * const data, const int nblocks, const int blockw, const int ndiag, const int ld, bool colmaj, bool own_data=false) :
+            DenseMatrix<Real_t>(data, DIM, DIM, ld ? ld : DIM, colmaj, own_data),
             m_nblocks(nblocks), m_blockw(blockw), m_ndiag(ndiag)
         {}
         Real_t& block(const int bi, const int ri, const int ci) const noexcept { return GET(BLOCK(bi, ri, ci, m_blockw)); }
@@ -84,8 +84,8 @@ namespace block_diag_ilu {
     template <typename Real_t = double>
     struct BlockBandedMatrix : public BandedMatrix<Real_t> {
         const int m_nblocks, m_blockw, m_ndiag;
-        BlockBandedMatrix(Real_t * const data, const int nblocks, const int blockw, const int ndiag) :
-            BandedMatrix<Real_t>(data, DIM, DIM, NOUTER, NOUTER),
+        BlockBandedMatrix(Real_t * const data, const int nblocks, const int blockw, const int ndiag, const int ld=0) :
+            BandedMatrix<Real_t>(data, DIM, DIM, NOUTER, NOUTER, ld),
             m_nblocks(nblocks), m_blockw(blockw), m_ndiag(ndiag)
         {}
         Real_t& block(const int bi, const int ri, const int ci) const noexcept { return GET(BLOCK(bi, ri, ci, m_blockw)); }
@@ -96,8 +96,7 @@ namespace block_diag_ilu {
 #undef GET_
 #undef NOUTER
 
-#define NITEMS MatrixBase<Real_t>::alignment_items_
-#define LD ((ld == 0) ? NITEMS*((blockw + NITEMS - 1)/NITEMS) : ld)
+#define LD ((ld == 0) ? AnyODE::n_padded<Real_t>(blockw, AnyODE::alignment_bytes_) : ld)
 #define BLK_NDATA nblocks*blockw*LD
 #define DIAG_HLF_NDATA (ndiag*nblocks - (ndiag*ndiag + ndiag)/2)*LD
 #define SAT_HLF_NDATA (nsat*nsat+nsat)/2*LD
@@ -110,11 +109,11 @@ namespace block_diag_ilu {
         const int m_blk_ndata, m_diag_hlf_ndata, m_sat_hlf_ndata;
     public:
         BlockDiagMatrix(Real_t * const data,
-                                  const int nblocks,
-                                  const int blockw,
-                                  const int ndiag=0,
-                                  const int nsat=0,
-                                  const int ld=0) :  // 64 byte alignment
+                        const int nblocks,
+                        const int blockw,
+                        const int ndiag=0,
+                        const int nsat=0,
+                        const int ld=0) :  // 64 byte alignment
             MatrixBase<Real_t>(data, DIM, DIM, LD, TOT_NDATA),
             m_nblocks(nblocks), m_blockw(blockw), m_ndiag(ndiag), m_nsat(nsat),
             m_blk_ndata(BLK_NDATA), m_diag_hlf_ndata(DIAG_HLF_NDATA), m_sat_hlf_ndata(SAT_HLF_NDATA)
