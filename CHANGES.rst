@@ -1,3 +1,7 @@
+v0.3.3
+======
+- Fix ld in Cython wrapper
+
 v0.3.2
 ======
 - BlockDiagMatrix needed to inspect m_colmaj
