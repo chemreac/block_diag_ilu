@@ -98,7 +98,7 @@ def Compressed_from_dense(cnp.ndarray[cnp.float64_t, ndim=2] A, nblocks, blockw,
         raise ValueError("A shape does not match nblocks & blockw")
     if ndiag > nblocks - 1:
         raise ValueError("too many diagonals")
-    cmprs = PyBlockDiagMatrix(nblocks, blockw, ndiag, nsat)
+    cmprs = PyBlockDiagMatrix(nblocks, blockw, ndiag, nsat, ld=blockw)
     for bi in range(nblocks):
         for ci in range(blockw):
             for ri in range(blockw):
