@@ -59,7 +59,7 @@ namespace block_diag_ilu {
 #define TOP(si, bi, ci, blkw, nblk) blkw*bi + ci, blkw*(nblk + bi - si - 1) + ci
 #define DIM nblocks*blockw
 
-#define GET_(ri, ci) this->m_data[(ci)*(this->m_ld) + ri]
+#define GET_(ri, ci) (this->m_colmaj ? this->m_data[(ci)*(this->m_ld) + ri] : this->m_data[(ri)*(this->m_ld) + ci])
 #define GET(...) GET_(__VA_ARGS__)
     template <typename Real_t = double>
     struct BlockDenseMatrix : public DenseMatrix<Real_t> {

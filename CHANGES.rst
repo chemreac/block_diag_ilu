@@ -1,3 +1,7 @@
+v0.3.2
+======
+- BlockDiagMatrix needed to inspect m_colmaj
+
 v0.3.1
 ======
 - Bumpy AnyODE
