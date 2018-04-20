@@ -1,10 +1,11 @@
 #!/bin/bash -xeu
 # Usage:
 #
-#    $ ./scripts/post_release.sh v1.2.3 myserver
+#    $ ./scripts/post_release.sh v1.2.3 myserver mygithubuser
 #
 VERSION=${1#v}
 SERVER=$2
+GITHUBUSER=$3
 PKG=$(find . -maxdepth 2 -name __init__.py -print0 | xargs -0 -n1 dirname | xargs basename)
 PKG_UPPER=$(echo $PKG | tr '[:lower:]' '[:upper:]')
 SDIST_FILE=dist/${PKG}-$VERSION.tar.gz
@@ -23,12 +24,9 @@ sed -i -E \
     -e "/cython/d" \
     dist/conda-recipe-$VERSION/meta.yaml
 
-if [[ -e ./scripts/update-gh-pages.sh ]]; then
-    ./scripts/update-gh-pages.sh v$VERSION
-fi
-# Specific for this project:
+for CONDA_PY in 27 35 36; do
+    ./scripts/build-conda-recipe-using-docker.sh dist/conda-recipe-$VERSION --python ${CONDA_PY}
+    scp dist/linux-64/${PKG}-${VERSION}-py${CONDA_PY}*.bz2 $PKG@$SERVER:~/public_html/conda-packages/
+done
 scp -r dist/conda-recipe-$VERSION/ $PKG@$SERVER:~/public_html/conda-recipes/
 scp "$SDIST_FILE" "$PKG@$SERVER:~/public_html/releases/"
-for CONDA_PY in 2.7 3.4 3.5; do
-    ssh $PKG@$SERVER "source /etc/profile; conda-build --python $CONDA_PY ~/public_html/conda-recipes/conda-recipe-$VERSION/"
-done

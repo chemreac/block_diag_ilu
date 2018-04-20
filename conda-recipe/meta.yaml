@@ -1,5 +1,5 @@
 {% set name = "block_diag_ilu" %}
-{% set version = "0.3.0.dev0+git" %}
+{% set version = "0.4.0.dev0+git" %}
 {% set variant = "openblas" %}
 
 package:
@@ -10,30 +10,30 @@ source:
   git_url: ../
 
 build:
-  number: 0
+  number: 200
   features:
     - blas_{{ variant }}  # [not win]
 
 requirements:
   build:
     - blas 1.1 {{ variant }}  # [not win]
-    - openblas 0.2.19*  # [not win]
+    - openblas 0.2.20*  # [not win]
+    - clangdev >=6.0
+    - libcxx >=6.0
     - python
+    - setuptools
+    - pip
     - cython
     - numpy
   run:
     - blas 1.1 {{ variant }}  # [not win]
-    - openblas 0.2.19*  # [not win]
+    - openblas 0.2.20*  # [not win]
+    - libcxx >=6.0
     - python
     - numpy
 
 test:
   requires:
-    - blas 1.1 {{ variant }}  # [not win]
-    - openblas 0.2.19*  # [not win]
-    - python
-    - numpy
-    - scipy
     - pytest
   imports:
     - block_diag_ilu
