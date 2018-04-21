@@ -1,6 +1,7 @@
 v0.3.4
 ======
 - More robust build (conda-recipe)
+- Updated AnyODE
 
 v0.3.3
 ======
