@@ -1,5 +1,5 @@
 #pragma once
-#include <stdlib.h>  // aligned_alloc & free
+#include <cstdlib>  // std::aligned_alloc (C++17) & std::free
 #include <stdint.h> // uintptr_t
 #include <cstring>  // std::memset
 #include <stdexcept> // std::runtime_error
@@ -12,16 +12,15 @@ namespace AnyODE {
     }
     static constexpr int alignment_bytes_ = 64; // L1 cache line
 
-    template<typename Real_t> class MatrixBase;
-
     template<typename Real_t>
     class MatrixBase {
-        void * m_array_ = nullptr;
-        bool m_own_array_ = false;
+        void * m_own_array_ = nullptr;
         Real_t * alloc_array_(int n){
-            m_array_ = aligned_alloc(alignment_bytes_, sizeof(Real_t)*n);
-            m_own_array_ = true;
-            return static_cast<Real_t *>(m_array_);
+            m_own_array_ = std::malloc(sizeof(Real_t)*n + alignment_bytes_ - 1);
+            const uintptr_t mask = ~uintptr_t(alignment_bytes_ - 1);
+            const uintptr_t addr = reinterpret_cast<uintptr_t>(m_own_array_);
+            const uintptr_t candidate = addr + alignment_bytes_ - 1;
+            return static_cast<Real_t *>(reinterpret_cast<void *>(candidate & mask));
         }
     public:
 
@@ -33,25 +32,25 @@ namespace AnyODE {
             m_own_data(own_data)
         {
             if (data == nullptr and own_data)
-                throw std::runtime_error("Cannot own a nullptr");
+                throw std::runtime_error("own_data not needed for nullptr");
         }
         MatrixBase(const MatrixBase<Real_t>& ori) : MatrixBase(nullptr, ori.m_nr, ori.m_nc, ori.m_ld, ori.m_ndata) {
             std::copy(ori.m_data, ori.m_data + m_ndata, m_data);
         }
         virtual ~MatrixBase(){
-            if (m_own_array_ and m_array_)
-                free(m_array_);
+            if (m_own_array_)
+                std::free(m_own_array_);
             if (m_own_data and m_data)
-                free(m_data);
+                std::free(m_data);
         }
-        virtual Real_t& operator()(int /* ri */, int /* ci */) { throw std::runtime_error("Not implemented."); };
+        virtual Real_t& operator()(int /* ri */, int /* ci */) { throw std::runtime_error("Not implemented: operator() in MatrixBase"); }
         const Real_t& operator()(int ri, int ci) const { return (*const_cast<MatrixBase<Real_t>* >(this))(ri, ci); }
         virtual bool valid_index(const int ri, const int ci) const {
             return (0 <= ri) and (ri < this->m_nr) and (0 <= ci) and (ci < this->m_nc);
         }
-        virtual bool guaranteed_zero_index(int /* ri */, int /* ci */) const { throw std::runtime_error("Not implemented."); };
-        virtual void dot_vec(const Real_t * const, Real_t * const) { throw std::runtime_error("Not implemented."); };
-        virtual void set_to_eye_plus_scaled_mtx(Real_t, const MatrixBase&) { throw std::runtime_error("Not implemented."); };
+        virtual bool guaranteed_zero_index(int /* ri */, int /* ci */) const { throw std::runtime_error("Not implemented: guaranteed_zero_index"); };
+        virtual void dot_vec(const Real_t * const, Real_t * const) { throw std::runtime_error("Not implemented: dot_vec"); };
+        virtual void set_to_eye_plus_scaled_mtx(Real_t, const MatrixBase&) { throw std::runtime_error("Not implemented: set_to_eye_plus_scaled_mtx"); };
         void set_to(Real_t value) noexcept { std::memset(m_data, value, m_ndata*sizeof(Real_t)); }
     };
 
@@ -147,6 +146,48 @@ namespace AnyODE {
             for (int ci = 0; ci < this->m_nc; ++ci)
                 for (int ri = std::max(0, ci-m_ku); ri < std::min(this->m_nr, ci+m_kl+1); ++ri)
                     (*this)(ri, ci) = scale*source(ri, ci) + ((ri == ci) ? 1 : 0);
+        }
+    };
+
+    template<typename Real_t=double>
+    struct DiagonalMatrix : public MatrixBase<Real_t> { // single diagonal
+        static constexpr bool m_colmaj = true;
+        DiagonalMatrix(Real_t * const data, int nr, int nc, int ld, bool own_data=false) :
+            MatrixBase<Real_t>(data, nr, nc, ld, ld*nc, own_data)
+        {
+        }
+        Real_t& operator()(int /* ri */, int ci) noexcept override final {
+            return this->m_data[ci*this->m_ld];
+        }
+        void read(const MatrixBase<Real_t>& source){
+            for (int i = 0; i < this->m_nc; ++i){
+                (*this)(i, i) = (source.guaranteed_zero_index(i, i)) ? 0 : source(i, i);
+            }
+        }
+        DiagonalMatrix(const MatrixBase<Real_t>& source) :
+            MatrixBase<Real_t>(nullptr, std::min(source.m_nr, source.m_nc), std::min(source.m_nr, source.m_nc),
+                               1, std::min(source.m_nr, source.m_nc))
+        {
+            read(source);
+        }
+        DiagonalMatrix(const DiagonalMatrix<Real_t> &ori) : MatrixBase<Real_t>(ori)
+        {
+        }
+        bool guaranteed_zero_index(const int ri, const int ci) const final {
+            return ri - ci;
+        }
+        void dot_vec(const Real_t * const vec, Real_t * const out) final {
+            for (int i=0; i < this->m_nc; ++i){
+                out[i] = this->m_data[i]*vec[i];
+            }
+        }
+        void set_to_eye_plus_scaled_mtx(Real_t scale, const MatrixBase<Real_t>& source) override {
+            for (int i = 0; i < this->m_nc; ++i)
+                this->m_data[i] = 1 + scale*source(i, i);
+        }
+        void set_to_eye_plus_scaled_mtx(Real_t scale, const DiagonalMatrix<Real_t>& source) {
+            for (int i = 0; i < this->m_nc; ++i)
+                this->m_data[i] = 1 + scale*source.m_data[i];
         }
     };
 }
