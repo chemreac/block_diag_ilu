@@ -35,6 +35,7 @@ requirements:
 test:
   requires:
     - pytest
+    - scipy
   imports:
     - block_diag_ilu
 
