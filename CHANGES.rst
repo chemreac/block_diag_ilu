@@ -1,3 +1,8 @@
+v0.3.5
+======
+- Require C++14 for now, rationale: Python's distutils' C++ support is truly terrible
+  (CXXFLAGS not supported for starters).
+
 v0.3.4
 ======
 - More robust build (conda-recipe)
