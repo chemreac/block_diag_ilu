@@ -1,6 +1,7 @@
 **.pyc
 **.so
 **.cache
+.*cache
 tests/catch.hpp
 tests/test_block_diag
 tests/test_dense
