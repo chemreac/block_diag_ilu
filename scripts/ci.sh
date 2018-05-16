@@ -1,5 +1,5 @@
 #!/bin/bash -xeu
-if ! [[ $(python setup.py --version) =~ ^[0-9]+.* ]]; then
+if ! [[ $(python3 setup.py --version) =~ ^[0-9]+.* ]]; then
     exit 1
 fi
 ./scripts/get_external.sh
@@ -7,7 +7,7 @@ fi
     cd tests
     export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-5.0/bin/llvm-symbolizer
     export ASAN_OPTIONS=symbolize=1
-    make clean; make CXX=clang++-5.0 EXTRA_FLAGS="-fsanitize=address"
+    make clean; make CXX=clang++-6.0 EXTRA_FLAGS="-fsanitize=address"
     make clean; make DEFINES=-D_GLIBCXX_DEBUG
     make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
     make clean; make test_block_diag_omp
@@ -16,30 +16,30 @@ fi
 
 python3 setup.py sdist
 VERSION=$(python3 setup.py --version)
-(cd dist/; python2 -m pip install $1-$VERSION.tar.gz)
-(cd /; python2 -m pytest --pyargs $1)
-(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install $1-$VERSION.tar.gz)
+(cd dist/; python3 -m pip install $1-$VERSION.tar.gz)
+(cd /; python3 -m pytest --pyargs $1)
+(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install --force-reinstall $1-$VERSION.tar.gz)
 (cd /; BLOCK_DIAG_ILU_NUM_THREADS=2 python3 -m pytest --pyargs $1)
 
 
 (
     cd python_prototype
-    PYTHONPATH=$(pwd) python -m pytest
+    PYTHONPATH=$(pwd) python3 -m pytest
     python setup.py build_ext -i
-    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
-    PYTHONPATH=$(pwd) python demo.py
+    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
+    PYTHONPATH=$(pwd) python3 demo.py
     rm _block_diag_ilu.so
-    BLOCK_DIAG_ILU_WITH_GETRF=1 python setup.py build_ext -i
-    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
-    PYTHONPATH=$(pwd) python demo.py
+    BLOCK_DIAG_ILU_WITH_GETRF=1 python3 setup.py build_ext -i
+    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
+    PYTHONPATH=$(pwd) python3 demo.py
     rm _block_diag_ilu.so
-    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=0 python setup.py build_ext -i
-    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
-    PYTHONPATH=$(pwd) python demo.py
+    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=0 python3 setup.py build_ext -i
+    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
+    PYTHONPATH=$(pwd) python3 demo.py
     rm _block_diag_ilu.so
-    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=1 python setup.py build_ext -i
-    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python -m pytest
-    PYTHONPATH=$(pwd) python demo.py
+    BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=1 python3 setup.py build_ext -i
+    PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
+    PYTHONPATH=$(pwd) python3 demo.py
 
     if [[ "$CI_BRANCH" == "master" ]]; then
         ./run_demo.sh

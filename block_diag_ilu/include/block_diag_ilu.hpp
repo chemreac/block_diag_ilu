@@ -16,7 +16,7 @@
 
 namespace block_diag_ilu {
     using std::unique_ptr;
-    using std::make_unique;
+    using AnyODE::make_unique;
     using AnyODE::buffer_t;
     using AnyODE::buffer_ptr_t;
     using AnyODE::buffer_factory;
