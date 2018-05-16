@@ -1,3 +1,8 @@
+v0.3.6
+======
+- Only require C++11
+- Deprecate BLOCK_DIAG_ILU_WITH_GETRF macro
+
 v0.3.5
 ======
 - Require C++14 for now, rationale: Python's distutils' C++ support is truly terrible
