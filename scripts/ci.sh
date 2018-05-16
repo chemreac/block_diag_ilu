@@ -9,7 +9,7 @@ fi
     export ASAN_OPTIONS=symbolize=1
     make clean; make CXX=clang++-6.0 EXTRA_FLAGS="-fsanitize=address"
     make clean; make DEFINES=-D_GLIBCXX_DEBUG
-    make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
+    # make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
     make clean; make test_block_diag_omp
     BLOCK_DIAG_ILU_NUM_THREADS=2 ./test_block_diag_omp --abortx 1
 )

@@ -6,11 +6,10 @@
 #include <cmath> // std::abs for float and double, std::sqrt, std::isnan
 #include <cstdlib> // std::abs for int (must include!!)
 
-#include <anyode/anyode_blas_lapack.hpp>
 #include <anyode/anyode_buffer.hpp>
 #include <anyode/anyode_matrix.hpp>
 
-#if defined(BLOCK_DIAG_ILU_WITH_GETRF)
+#if !defined(BLOCK_DIAG_ILU_WITH_GETRF)
 #include <anyode/anyode_blas_lapack.hpp>
 #endif
 
