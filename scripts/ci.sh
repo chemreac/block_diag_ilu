@@ -28,15 +28,15 @@ VERSION=$(python3 setup.py --version)
     python3 setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
     PYTHONPATH=$(pwd) python3 demo.py
-    rm _block_diag_ilu.so
+    rm _block_diag_ilu*.so
     BLOCK_DIAG_ILU_WITH_GETRF=1 python3 setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
     PYTHONPATH=$(pwd) python3 demo.py
-    rm _block_diag_ilu.so
+    rm _block_diag_ilu*.so
     BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=0 python3 setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
     PYTHONPATH=$(pwd) python3 demo.py
-    rm _block_diag_ilu.so
+    rm _block_diag_ilu*.so
     BLOCK_DIAG_ILU_WITH_OPENMP=1 BLOCK_DIAG_ILU_WITH_GETRF=1 python3 setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
     PYTHONPATH=$(pwd) python3 demo.py
