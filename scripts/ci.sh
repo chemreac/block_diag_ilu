@@ -25,7 +25,7 @@ VERSION=$(python3 setup.py --version)
 (
     cd python_prototype
     PYTHONPATH=$(pwd) python3 -m pytest
-    python setup.py build_ext -i
+    python3 setup.py build_ext -i
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
     PYTHONPATH=$(pwd) python3 demo.py
     rm _block_diag_ilu.so
