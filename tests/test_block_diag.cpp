@@ -420,7 +420,6 @@ TEST_CASE( "get_global", "[ColMajBlockDiagView]" ) {
     const int ndiag = 2;
     const int nsat = 0;
     const int ld = 2;
-    auto X = -99;
     // 5 3 2 # 6 #
     // 5 8 # 3 # 7
     // 1 # 8 4 4 #

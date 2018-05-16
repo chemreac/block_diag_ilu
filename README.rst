@@ -44,9 +44,6 @@ The following macros affect the compilation:
 |                           |`BLOCK_DIAG_ILU_NUM_THREADS` to control number |               |
 |                           |of threads.                                    |               |
 +---------------------------+-----------------------------------------------+---------------+
-|BLOCK_DIAG_ILU_WITH_GETRF  |Use unblocked (parallell) internal             |undefined      |
-|                           |implementation of LAPACK's ``dgetrf``.         |               |
-+---------------------------+-----------------------------------------------+---------------+
 
 ``setup.py`` will set these when envinronment variables with those are set to "1".
 

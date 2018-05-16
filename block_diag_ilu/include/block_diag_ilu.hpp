@@ -6,17 +6,16 @@
 #include <cmath> // std::abs for float and double, std::sqrt, std::isnan
 #include <cstdlib> // std::abs for int (must include!!)
 
-#include <anyode/anyode_blas_lapack.hpp>
 #include <anyode/anyode_buffer.hpp>
 #include <anyode/anyode_matrix.hpp>
 
-#if defined(BLOCK_DIAG_ILU_WITH_GETRF)
+#if !defined(BLOCK_DIAG_ILU_WITH_GETRF)
 #include <anyode/anyode_blas_lapack.hpp>
 #endif
 
 namespace block_diag_ilu {
     using std::unique_ptr;
-    using std::make_unique;
+    using AnyODE::make_unique;
     using AnyODE::buffer_t;
     using AnyODE::buffer_ptr_t;
     using AnyODE::buffer_factory;
@@ -374,15 +373,15 @@ namespace block_diag_ilu {
             }
             return off_diag_factor / (blkw * (nblk - 1 - di) * 2);
         }
-        auto as_dense() const {
+        std::unique_ptr<DenseMatrix<Real_t> > as_dense() const {
             const int dim = m_blockw*m_nblocks;
             return make_unique<DenseMatrix<Real_t> >(*this, dim, dim, dim);
         }
-        auto as_banded_padded(const int ld=0) const {
+        std::unique_ptr<BandedMatrix<Real_t> > as_banded_padded(const int ld=0) const {
             const int nouter = nouter_(m_blockw, m_ndiag);
             return make_unique<BandedMatrix<Real_t> >(*this, nouter, nouter, ld);
         }
-        auto as_block_banded() const {
+        std::unique_ptr<BlockBandedMatrix<Real_t> > as_block_banded() const {
             auto bbv = make_unique<BlockBandedMatrix<Real_t> >(nullptr, m_nblocks, m_blockw, m_ndiag);
             bbv.read(*this);
             return bbv;
