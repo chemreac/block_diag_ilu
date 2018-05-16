@@ -24,13 +24,13 @@ requirements:
     - setuptools
     - pip
     - cython
-    - numpy
+    - numpy 1.11.*
   run:
     - blas 1.1 {{ variant }}  # [not win]
     - openblas 0.2.20*  # [not win]
     - libcxx >=6.0
     - python
-    - numpy
+    - numpy >=1.11
 
 test:
   requires:
