@@ -31,7 +31,7 @@ TEST_CASE( "BandedLU(view)", "[BandedLU]" ) {
     block_diag_ilu::BlockDiagMatrix<double> cmbdv {data.data(), nblocks, blockw, ndiag, nsat, ld};
     REQUIRE( cmbdv.m_ld == ld );
     std::array<double, blockw*nblocks> xref {{-7, 13, 9, -4, -0.7, 42}};
-    std::array<double, blockw*nblocks> x;
+//    std::array<double, blockw*nblocks> x;
     std::array<double, blockw*nblocks> b;
     cmbdv.dot_vec(&xref[0], &b[0]);
     const int nouter = ndiag*blockw;
