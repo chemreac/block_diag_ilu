@@ -1,3 +1,7 @@
+v0.3.7
+======
+- Avoid using exceptions in program flow
+
 v0.3.6
 ======
 - Only require C++11
