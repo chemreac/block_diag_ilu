@@ -251,13 +251,13 @@ namespace block_diag_ilu {
             return (*const_cast<BlockDiagMatrix<Real_t>* >(this))(ri, ci);
         }
         virtual bool guaranteed_zero_index(const int ri, const int ci) const override {
-            return !valid_index(ri, ci)
+            return !valid_index(ri, ci);
         }
         virtual bool valid_index(const int ri, const int ci) const override {
-            const int bri = rowi / this->m_blockw;
-            const int bci = coli / this->m_blockw;
-            const int lri = rowi - bri*this->m_blockw;
-            const int lci = coli - bci*this->m_blockw;
+            const int bri = ri / this->m_blockw;
+            const int bci = ci / this->m_blockw;
+            const int lri = ri - bri*this->m_blockw;
+            const int lci = ci - bci*this->m_blockw;
             if (lri != lci)
                 return false;
             if (bri > bci) {
