@@ -258,6 +258,8 @@ namespace block_diag_ilu {
             const int bci = ci / this->m_blockw;
             const int lri = ri - bri*this->m_blockw;
             const int lci = ci - bci*this->m_blockw;
+            if (bri == lri)
+                return true;
             if (lri != lci)
                 return false;
             if (bri > bci) {
