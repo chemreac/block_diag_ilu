@@ -1,3 +1,7 @@
+v0.3.8
+======
+- Use latest AnyODE
+
 v0.3.7
 ======
 - Avoid using exceptions in program flow
