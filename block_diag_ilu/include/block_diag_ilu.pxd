@@ -11,7 +11,7 @@ cdef extern from "anyode/anyode_matrix.hpp" namespace "AnyODE":
     cdef cppclass BandedMatrix[T]:
         pass
 
-cdef extern from "anyode/anyode_decomposition.hpp" namespace "AnyODE":
+cdef extern from "anyode/anyode_decomposition_lapack.hpp" namespace "AnyODE":
     cdef cppclass BandedLU[T]:
         BandedLU(BandedMatrix[T]*)
         int solve(T *, T *)
