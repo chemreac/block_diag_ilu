@@ -1,3 +1,11 @@
+v0.3.9
+======
+- Maintaince mode branch 0.3.x
+
+v0.3.8
+======
+- Invalidated release
+
 v0.3.7
 ======
 - Avoid using exceptions in program flow
