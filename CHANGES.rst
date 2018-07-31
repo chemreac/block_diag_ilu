@@ -1,3 +1,7 @@
+v0.4.0
+======
+- New v0.4 branch (new AnyODE)
+
 v0.3.8
 ======
 - Use latest AnyODE
