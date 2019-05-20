@@ -1,3 +1,7 @@
+v0.4.1
+======
+- Fix escape sequence in setup.py
+
 v0.4.0
 ======
 - New v0.4 branch (new AnyODE)

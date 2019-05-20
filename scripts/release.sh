@@ -1,19 +1,18 @@
 #!/bin/bash -xeu
 # Usage:
 #
-#    $ ./scripts/release.sh v1.2.3 ANACONDA_PATH myserver.example.com GITHUB_USER GITHUB_REPO GIT_REMOTE
+#    $ ./scripts/release.sh v1.2.3 myserver.example.com GITHUB_USER GITHUB_REPO GIT_REMOTE
 #
 # e.g.
 #
-#    $ ./scripts/release.sh v0.2.5 /opt/users/miniconda3/bin hera.physchem.kth.se chemreac block_diag_ilu git@github.com:chemreac/block_diag_ilu
+#    $ ./scripts/release.sh v0.2.5 hera.physchem.kth.se chemreac block_diag_ilu git@github.com:chemreac/block_diag_ilu
 
 if [[ $1 != v* ]]; then
     echo "Argument does not start with 'v'"
     exit 1
 fi
 VERSION=${1#v}
-CONDA_PATH=$2
-SERVER=$3
+SERVER=$2
 find . -type f -iname "*.pyc" -exec rm {} +
 find . -type f -iname "*.o" -exec rm {} +
 find . -type f -iname "*.so" -exec rm {} +
@@ -27,28 +26,22 @@ PKG_UPPER=$(echo $PKG | tr '[:lower:]' '[:upper:]')
 ./scripts/run_tests.sh
 env ${PKG_UPPER}_RELEASE_VERSION=v$VERSION python setup.py sdist
 if [[ -e ./scripts/generate_docs.sh ]]; then
-    env ${PKG_UPPER}_RELEASE_VERSION=v$VERSION ./scripts/generate_docs.sh  # $4 ${5:-$PKG} v$VERSION
+    env ${PKG_UPPER}_RELEASE_VERSION=v$VERSION ./scripts/generate_docs.sh  # $3 ${4:-$PKG} v$VERSION
 fi
-for CONDA_PY in 2.7 3.4 3.5; do
-    for CONDA_NPY in 1.11; do
-        continue  # we build the conda recipe on another host for now..
-        PATH=$CONDA_PATH:$PATH ./scripts/build_conda_recipe.sh v$VERSION --python $CONDA_PY --numpy $CONDA_NPY
-    done
-done
 
 # All went well, add a tag and push it.
 git tag -a v$VERSION -m v$VERSION
-git push ${6:-origin}
-git push --tags ${6:-origin}
+git push ${5:-origin}
+git push --tags ${5:-origin}
 twine upload dist/${PKG}-$VERSION.tar.gz
 
 set +x
 echo ""
 echo "    You may now create a new github release at with the tag \"v$VERSION\", here is a link:"
-echo "        https://github.com/$4/${5:-$PKG}/releases/new "
+echo "        https://github.com/$3/${4:-$PKG}/releases/new "
 echo "    name the release \"${PKG}-${VERSION}\", and don't foreget to manually attach the file:"
 echo "        $(openssl sha256 $(pwd)/dist/${PKG}-${VERSION}.tar.gz)"
 echo "    Then run:"
 echo ""
-echo "        $ ./scripts/post_release.sh $1 $SERVER $4"
+echo "        $ ./scripts/post_release.sh $1 $SERVER $3"
 echo ""
