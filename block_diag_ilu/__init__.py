@@ -4,6 +4,7 @@ block_diag_ilu is a C++ implementation of an incomplete LU factorization, ILU(0)
 """
 
 from __future__ import (absolute_import, division, print_function)
+from ._release import __version__
 
 from ._block_diag_ilu import (
     Compressed, Compressed_from_dense, Compressed_from_data,
