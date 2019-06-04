@@ -1,3 +1,7 @@
+v0.3.11
+=======
+- Tweaks to setup.py
+
 v0.3.10
 =======
 - Updated setup.py
