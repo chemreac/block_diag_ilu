@@ -1,3 +1,7 @@
+v0.3.12
+=======
+- expose block_diag_ilu.__version__
+
 v0.3.11
 =======
 - Tweaks to setup.py
