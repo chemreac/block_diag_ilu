@@ -16,21 +16,17 @@ build:
 
 requirements:
   build:
-    - blas 1.1 {{ variant }}  # [not win]
-    - openblas 0.2.20*  # [not win]
-    - clangdev >=6.0
-    - libcxx >=6.0
+    - {{ compiler('cxx') }}
+  host:
     - python
-    - setuptools
-    - pip
+    - numpy
     - cython
-    - numpy 1.11.*
+    - pip
+    - libblas
+    - liblapack
   run:
-    - blas 1.1 {{ variant }}  # [not win]
-    - openblas 0.2.20*  # [not win]
-    - libcxx >=6.0
     - python
-    - numpy >=1.11
+    - {{ pin_compatible('numpy') }}
 
 test:
   requires:

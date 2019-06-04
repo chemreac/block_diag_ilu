@@ -59,7 +59,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         os.path.join('external', 'anyode', 'include')
     ]
     ext_modules[0].define_macros += macros
-    ext_modules[0].libraries += [env['LAPACK']]
+    ext_modules[0].libraries += env['LAPACK'].split(',')
 
 _version_env_var = '%s_RELEASE_VERSION' % pkg_name.upper()
 RELEASE_VERSION = os.environ.get(_version_env_var, '')
@@ -87,10 +87,10 @@ else:  # set `__version__` from _release.py:
         except subprocess.CalledProcessError:
             warnings.warn("A git-archive is being installed - version information incomplete.")
         else:
-            if 'develop' not in sys.argv and '-' in _git_version:
+            if 'develop' not in sys.argv:
                 warnings.warn("Using git to derive version: dev-branches may compete.")
-                _git_version = re.sub('v([0-9.]+)-(\d+)-(\w+)', r'v\1.post\2+\3', _git_version)  # .dev < '' < .post
-            __version__ = _git_version[1:]
+                _ver_tmplt = r'\1.post\2' if os.environ.get('CONDA_BUILD', '0') == '1' else r'\1.post\2+\3'
+                __version__ = re.sub(r'v([0-9.]+)-(\d+)-(\S+)', _ver_tmplt, _git_version)  # .dev < '' < .post
 
 classifiers = [
     "Development Status :: 4 - Beta",
