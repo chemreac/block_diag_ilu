@@ -16,7 +16,7 @@ fi
 
 python3 setup.py sdist
 VERSION=$(python3 setup.py --version)
-PKGNAME=$1
+PKG_NAME=$1
 BRANCH=${2:-$DRONE_TAG}
 (cd dist/; python3 -m pip install $PKG_NAME-$VERSION.tar.gz)
 (cd /; python3 -m pytest --pyargs $PKG_NAME)
