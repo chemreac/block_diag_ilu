@@ -18,6 +18,7 @@ python3 setup.py sdist
 VERSION=$(python3 setup.py --version)
 PKG_NAME=$1
 BRANCH=${2:-$DRONE_TAG}
+echo "Branch/tag: $BRANCH"
 (cd dist/; python3 -m pip install $PKG_NAME-$VERSION.tar.gz)
 (cd /; python3 -m pytest --pyargs $PKG_NAME)
 (cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install --force-reinstall $PKG_NAME-$VERSION.tar.gz)
