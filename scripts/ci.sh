@@ -16,10 +16,12 @@ fi
 
 python3 setup.py sdist
 VERSION=$(python3 setup.py --version)
-(cd dist/; python3 -m pip install $1-$VERSION.tar.gz)
-(cd /; python3 -m pytest --pyargs $1)
-(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install --force-reinstall $1-$VERSION.tar.gz)
-(cd /; BLOCK_DIAG_ILU_NUM_THREADS=2 python3 -m pytest --pyargs $1)
+PKGNAME=$1
+BRANCH=${2:-$DRONE_TAG}
+(cd dist/; python3 -m pip install $PKG_NAME-$VERSION.tar.gz)
+(cd /; python3 -m pytest --pyargs $PKG_NAME)
+(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install --force-reinstall $PKG_NAME-$VERSION.tar.gz)
+(cd /; BLOCK_DIAG_ILU_NUM_THREADS=2 python3 -m pytest --pyargs $PKG_NAME)
 
 
 (

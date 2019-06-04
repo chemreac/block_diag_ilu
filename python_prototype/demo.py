@@ -14,7 +14,10 @@ hence not suitable for benchmarking.
 
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-from future.builtins import *
+try:
+    from future.builtins import *
+except ImportError:
+    pass
 from math import exp
 
 from itertools import product
