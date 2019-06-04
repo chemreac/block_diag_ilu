@@ -1,3 +1,7 @@
+v0.3.10
+=======
+- Updated setup.py
+
 v0.3.9
 ======
 - Maintaince mode branch 0.3.x
