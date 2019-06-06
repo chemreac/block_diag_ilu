@@ -52,7 +52,7 @@ echo "Branch/tag: $BRANCH"
 )
 
 # Make sure repo is pip installable from git-archive zip
-git-archive-all /tmp/archive.zip # git-archive-all includes submodules in external/
+git-archive-all --prefix="" /tmp/archive.zip # git-archive-all includes submodules in external/
 (
     cd /
     python3 -m pip install --force-reinstall /tmp/archive.zip
