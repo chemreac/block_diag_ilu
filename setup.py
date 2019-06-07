@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import io
+import logging
 import os
 import pprint
 import re
@@ -23,21 +24,58 @@ def _path_under_setup(*args):
 
 release_py_path = _path_under_setup(pkg_name, '_release.py')
 config_py_path = _path_under_setup(pkg_name, '_config.py')
-env = None  # silence pyflakes, 'env' is actually set on the next line
-exec(open(config_py_path).read())
-for k, v in list(env.items()):
-    env[k] = os.environ.get('%s_%s' % (pkg_name.upper(), k), v)
+
+_version_env_var = '%s_RELEASE_VERSION' % pkg_name.upper()
+_RELEASE_VERSION = os.environ.get(_version_env_var, '')
+
+
+if len(_RELEASE_VERSION) > 1:
+    if _RELEASE_VERSION[0] != 'v':
+        raise ValueError("$%s does not start with 'v'" % _version_env_var)
+    TAGGED_RELEASE = True
+    __version__ = _RELEASE_VERSION[1:]
+else:  # set `__version__` from _release.py:
+    TAGGED_RELEASE = False
+    exec(open(release_py_path).read())
+    if __version__.endswith('git'):
+        try:
+            _git_version = subprocess.check_output(
+                ['git', 'describe', '--dirty']).rstrip().decode('utf-8').replace('-dirty', '+dirty')
+        except subprocess.CalledProcessError:
+            warnings.warn("A git-archive is being installed - version information incomplete.")
+        else:
+            if 'develop' not in sys.argv:
+                warnings.warn("Using git to derive version: dev-branches may compete.")
+                _ver_tmplt = r'\1.post\2' if os.environ.get('CONDA_BUILD', '0') == '1' else r'\1.post\2+\3'
+                __version__ = re.sub(r'v([0-9.]+)-(\d+)-(\S+)', _ver_tmplt, _git_version)  # .dev < '' < .post
 
 
 USE_CYTHON = os.path.exists(_path_under_setup(pkg_name, '_%s.pyx' % pkg_name))
 package_include = os.path.join(pkg_name, 'include')
 
-# Cythonize .pyx file if it exists (not in source distribution)
+_cpp = _path_under_setup(pkg_name, '_%s.cpp' % pkg_name)
+_pyx = _path_under_setup(pkg_name, '_%s.pyx' % pkg_name)
+if os.path.exists(_cpp):
+    if os.path.exists(_pyx) and os.path.getmtime(_pyx) - 1e-6 >= os.path.getmtime(_cpp):
+        USE_CYTHON = True
+    else:
+        USE_CYTHON = False
+else:
+    if os.path.exists(_pyx):
+        USE_CYTHON = True
+    else:
+        raise ValueError("Neither pyx nor cpp file found")
 ext_modules = []
 
 if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         '--help-commands', 'egg_info', 'clean', '--version'):
     import numpy as np
+    env = None  # silence pyflakes, 'env' is actually set on the next line
+    exec(open(config_py_path).read())
+    for k, v in list(env.items()):
+        env[k] = os.environ.get('%s_%s' % (pkg_name.upper(), k), v)
+    logger = logging.getLogger(__name__)
+    logger.info("Config for %s: %s" % (pkg_name, str(env)))
     ext = '.pyx' if USE_CYTHON else '.cpp'
     sources = [os.path.join(pkg_name, '_%s%s' % (pkg_name, ext))]
     ext_modules = [Extension('%s._%s' % (pkg_name, pkg_name), sources)]
@@ -45,7 +83,6 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
     if USE_CYTHON:
         from Cython.Build import cythonize
         ext_modules = cythonize(ext_modules, include_path=[package_include])
-    print(ext_modules)
     macros = [('BLOCK_DIAG_ILU_PY', None)]
     if env.get('BLOCK_DIAG_ILU_WITH_GETRF') == '1':
         macros.append(('BLOCK_DIAG_ILU_WITH_GETRF', None))
@@ -59,38 +96,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         os.path.join('external', 'anyode', 'include')
     ]
     ext_modules[0].define_macros += macros
-    ext_modules[0].libraries += [env['LAPACK']]
-
-_version_env_var = '%s_RELEASE_VERSION' % pkg_name.upper()
-RELEASE_VERSION = os.environ.get(_version_env_var, '')
-
-if os.environ.get('CONDA_BUILD', '0') == '1':
-    # http://conda.pydata.org/docs/build.html#environment-variables-set-during-the-build-process
-    try:
-        RELEASE_VERSION = 'v' + open(
-            '__conda_version__.txt', 'rt').readline().rstrip()
-    except IOError:
-        pass
-
-if len(RELEASE_VERSION) > 1:
-    if RELEASE_VERSION[0] != 'v':
-        raise ValueError("$%s does not start with 'v'" % _version_env_var)
-    TAGGED_RELEASE = True
-    __version__ = RELEASE_VERSION[1:]
-else:  # set `__version__` from _release.py:
-    TAGGED_RELEASE = False
-    exec(open(release_py_path).read())
-    if __version__.endswith('git'):
-        try:
-            _git_version = subprocess.check_output(
-                ['git', 'describe', '--dirty']).rstrip().decode('utf-8').replace('-dirty', '+dirty')
-        except subprocess.CalledProcessError:
-            warnings.warn("A git-archive is being installed - version information incomplete.")
-        else:
-            if 'develop' not in sys.argv and '-' in _git_version:
-                warnings.warn("Using git to derive version: dev-branches may compete.")
-                _git_version = re.sub(r'v([0-9.]+)-(\d+)-(\w+)', r'v\1.post\2+\3', _git_version)  # .dev < '' < .post
-            __version__ = _git_version[1:]
+    ext_modules[0].libraries += env['LAPACK'].split(',')
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -140,10 +146,7 @@ if __name__ == '__main__':
             shutil.move(release_py_path, release_py_path+'__temp__')
             open(release_py_path, 'wt').write(
                 "__version__ = '{}'\n".format(__version__))
-        shutil.move(config_py_path, config_py_path+'__temp__')
-        open(config_py_path, 'wt').write("env = {}\n".format(pprint.pformat(env)))
         setup(**setup_kwargs)
     finally:
         if TAGGED_RELEASE:
             shutil.move(release_py_path+'__temp__', release_py_path)
-        shutil.move(config_py_path+'__temp__', config_py_path)

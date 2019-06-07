@@ -5,10 +5,10 @@ fi
 ./scripts/get_external.sh
 (
     cd tests
-    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-5.0/bin/llvm-symbolizer
+    export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-8/bin/llvm-symbolizer
     export ASAN_OPTIONS=symbolize=1
-    make clean; make CXX=clang++-6.0 EXTRA_FLAGS="-fsanitize=address"
-    make clean; make DEFINES=-D_GLIBCXX_DEBUG
+    make clean; make CXX=clang++-8 EXTRA_FLAGS="-fsanitize=address"
+    make clean; make DEFINES="-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC"
     # make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
     make clean; make test_block_diag_omp
     BLOCK_DIAG_ILU_NUM_THREADS=2 ./test_block_diag_omp --abortx 1
@@ -16,10 +16,13 @@ fi
 
 python3 setup.py sdist
 VERSION=$(python3 setup.py --version)
-(cd dist/; python3 -m pip install $1-$VERSION.tar.gz)
-(cd /; python3 -m pytest --pyargs $1)
-(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install --force-reinstall $1-$VERSION.tar.gz)
-(cd /; BLOCK_DIAG_ILU_NUM_THREADS=2 python3 -m pytest --pyargs $1)
+PKG_NAME=$1
+BRANCH=${2:-$DRONE_TAG}
+echo "Branch/tag: $BRANCH"
+(cd dist/; python3 -m pip install $PKG_NAME-$VERSION.tar.gz)
+(cd /; python3 -m pytest --pyargs $PKG_NAME)
+(cd dist/; BLOCK_DIAG_ILU_WITH_OPENMP=1 python3 -m pip install --force-reinstall $PKG_NAME-$VERSION.tar.gz)
+(cd /; BLOCK_DIAG_ILU_NUM_THREADS=2 python3 -m pytest --pyargs $PKG_NAME)
 
 
 (
@@ -41,15 +44,15 @@ VERSION=$(python3 setup.py --version)
     PYTHONPATH=$(pwd) USE_FAST_FAKELU=1 python3 -m pytest
     PYTHONPATH=$(pwd) python3 demo.py
 
-    if [[ "$CI_BRANCH" == "master" ]]; then
+    if [[ "$2" == "master" ]]; then
         ./run_demo.sh
-        mkdir -p ../deploy/public_html/branches/"${CI_BRANCH}"/
-        cp run_demo.out demo_out.png  ../deploy/public_html/branches/"${CI_BRANCH}"/
+        mkdir -p ../deploy/public_html/branches/"$2"/
+        cp run_demo.out demo_out.png  ../deploy/public_html/branches/"$2"/
     fi
 )
 
 # Make sure repo is pip installable from git-archive zip
-git archive -o /tmp/archive.zip HEAD
+git-archive-all --prefix="" /tmp/archive.zip # git-archive-all includes submodules in external/
 (
     cd /
     python3 -m pip install --force-reinstall /tmp/archive.zip
@@ -65,8 +68,8 @@ assert "block_diag_ilu.pxd" in os.listdir(gi())
     python3 generate_infographics.py --ndiag 3 --N 15
     python3 generate_infographics.py --savefig periodic -p --ndiag 3 --N 15
     python3 generate_infographics.py --savefig interpolating -i --ndiag 3 --N 15
-    mkdir -p ../deploy/public_html/branches/"${CI_BRANCH}"/
-    cp *.png ../deploy/public_html/branches/"${CI_BRANCH}"/
+    mkdir -p ../deploy/public_html/branches/"$2"/
+    cp *.png ../deploy/public_html/branches/"$2"/
 )
 
 if grep "DO-NOT-MERGE!" -R . --exclude ci.sh; then exit 1; fi
