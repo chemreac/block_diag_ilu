@@ -1,3 +1,7 @@
+v0.4.2
+======
+- Changes to setup.py
+
 v0.4.1
 ======
 - Fix escape sequence in setup.py
