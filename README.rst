@@ -57,5 +57,4 @@ Contributors are welcome to suggest improvements at https://github.com/chemreac/
 Author
 ------
 Björn Dahlgren, contact:
- - gmail adress: bjodah
- - kth.se adress: bda
+ - gmail address: bjodah
