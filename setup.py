@@ -64,11 +64,11 @@ if _HAVE_CYTHON and os.path.exists(_src["pyx"]):
     # or that we want to include possible bug-fix to Cython, disable by manually
     # deleting .pyx file from source distribution.
     USE_CYTHON = True
-    if os.path.exists(_src['c']):
-        os.unlink(_src['c'])  # ensure c++ source is re-generated.
+    if os.path.exists(_src["cpp"]):
+        os.unlink(_src["cpp"])  # ensure c++ source is re-generated.
 else:
     USE_CYTHON = False
-    if not os.path.exists(_src['cpp']):
+    if not os.path.exists(_src["cpp"]):
         raise ValueError("Neither pyx nor cpp file found")
 
 ext_modules = []
@@ -82,7 +82,7 @@ if len(sys.argv) > 1 and '--help' not in sys.argv[1:] and sys.argv[1] not in (
         env[k] = os.environ.get('%s_%s' % (pkg_name.upper(), k), v)
     logger = logging.getLogger(__name__)
     logger.info("Config for %s: %s" % (pkg_name, str(env)))
-    ext_modules = [Extension('%s._%s' % (pkg_name, pkg_name), [_src["pyx" if USE_CYTHON else "c"]])]
+    ext_modules = [Extension('%s._%s' % (pkg_name, pkg_name), [_src["pyx" if USE_CYTHON else "cpp"]])]
     if USE_CYTHON:
         from Cython.Build import cythonize
         ext_modules = cythonize(ext_modules, include_path=[package_include])
