@@ -1,3 +1,8 @@
+v0.4.3
+======
+- update setup.py to re-run Cython when .pyx available
+- update setup.py to new requirements in more recent versions of setuptools
+
 v0.4.2
 ======
 - Changes to setup.py
