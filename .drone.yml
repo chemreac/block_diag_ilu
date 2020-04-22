@@ -7,7 +7,7 @@ clone:
 
 pipeline:
   run-tests:
-    image: bjodah/bjodahimg20:v1.0
+    image: bjodah/bjodahimg20:v1.1
     commands:
       - ./scripts/ci.sh block_diag_ilu ${DRONE_BRANCH}
 #      - PATH=/opt/miniconda3/bin:$PATH conda build conda-recipe
