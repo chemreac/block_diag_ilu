@@ -8,7 +8,7 @@ fi
     export ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-10/bin/llvm-symbolizer
     export ASAN_OPTIONS=symbolize=1
     make clean; make CXX=clang++-10 EXTRA_FLAGS="-fsanitize=address"
-    make clean; make CXX=g++-10 DEFINES="-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC"
+    make clean; make CXX=g++-10 DEFINES="-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -D_FORTIFY_SOURCE=2"
     # make clean; make DEFINES="-DNDEBUG -DBLOCK_DIAG_ILU_WITH_GETRF" LIBS=""
     make clean; make test_block_diag_omp
     BLOCK_DIAG_ILU_NUM_THREADS=2 ./test_block_diag_omp --abortx 1

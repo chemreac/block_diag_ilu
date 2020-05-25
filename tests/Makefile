@@ -1,6 +1,21 @@
 CXX ?= g++
 LIBS ?= -llapack -lblas
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -Werror -pedantic -DBLOCK_DIAG_ILU_UNIT_TEST -g -ggdb -O0
+WARNINGS ?= \
+-Wall \
+-Wextra \
+-Wredundant-decls \
+-Wcast-align \
+-Wmissing-include-dirs \
+-Wswitch-enum \
+-Wswitch-default \
+-Winvalid-pch \
+-Wredundant-decls \
+-Wformat=2 \
+-Wmissing-format-attribute \
+-Wformat-nonliteral \
+-Wodr
+
+CXXFLAGS ?= -std=c++11 $(WARNINGS) -Werror -pedantic -DBLOCK_DIAG_ILU_UNIT_TEST -g -ggdb -O0
 CXXFLAGS += $(EXTRA_FLAGS)
 INCLUDE ?= -I../include -I../external/anyode/include
 DEFINES ?=
