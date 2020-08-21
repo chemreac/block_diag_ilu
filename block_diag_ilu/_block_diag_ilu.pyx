@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # -*- mode: cython -*-
+# cython: language_level=3
 # distutils: language = c++
 
 from libcpp.memory cimport unique_ptr

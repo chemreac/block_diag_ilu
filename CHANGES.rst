@@ -1,3 +1,7 @@
+v0.4.5
+======
+- Cython: use language_level=3
+
 v0.4.4
 ======
 - Use latest AnyODE
