@@ -1,3 +1,7 @@
+v0.4.6
+======
+No change except rerendered Cython source for PyPI distribution.
+
 v0.4.5
 ======
 - Cython: use language_level=3
