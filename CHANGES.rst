@@ -1,3 +1,7 @@
+v0.5.0
+======
+New AnyODE interface jtimes_setup
+
 v0.4.7
 ======
 Previous version broken.
