@@ -1,3 +1,7 @@
+v0.4.7
+======
+Previous version broken.
+
 v0.4.6
 ======
 No change except rerendered Cython source for PyPI distribution.
