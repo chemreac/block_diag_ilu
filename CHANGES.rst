@@ -1,3 +1,7 @@
+v0.5.1
+======
+Release script was broken.
+
 v0.5.0
 ======
 New AnyODE interface jtimes_setup
