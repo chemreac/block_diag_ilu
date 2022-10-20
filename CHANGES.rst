@@ -1,3 +1,7 @@
+v0.5.2
+======
+Re-render cython sources.
+
 v0.5.1
 ======
 Release script was broken.
